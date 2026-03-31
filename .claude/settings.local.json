@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls D:/Daniyal/barpos/app/\\\\\\(cashier\\\\\\)/)",
+      "Bash(ls D:/Daniyal/barpos/app/\\\\\\(admin\\\\\\)/)",
+      "Bash(ls D:/Daniyal/barpos/app/\\\\\\(superadmin\\\\\\)/)",
+      "Bash(ls D:/Daniyal/barpos/app/\\\\\\(auth\\\\\\)/)",
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Read(//d/Daniyal/barpos/**)",
+      "Bash(done)"
+    ]
+  }
+}
