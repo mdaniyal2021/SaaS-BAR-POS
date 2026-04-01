@@ -1,13 +1,18 @@
 import { NextResponse } from 'next/server'
 import connectDB from '@/lib/db'
-import { getUserFromRequest } from '@/lib/auth'
 import Bar from '@/models/Bar'
 import User from '@/models/User'
+import { getUserFromRequest } from '@/lib/auth'
 
+function isSuperAdmin(request) {
+  const user = getUserFromRequest(request)
+  return user?.role === 'superadmin' ? user : null
+}
+
+// GET — fetch all bars
 export async function GET(request) {
   try {
-    const user = getUserFromRequest(request)
-    if (!user || user.role !== 'superadmin') {
+    if (!isSuperAdmin(request)) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
     }
 
@@ -15,58 +20,83 @@ export async function GET(request) {
 
     const bars = await Bar.find().sort({ createdAt: -1 })
 
-    const barsWithStaff = await Promise.all(
+    const barsWithStats = await Promise.all(
       bars.map(async (bar) => {
         const staffCount = await User.countDocuments({ bar: bar._id })
-        return { ...bar.toObject(), staffCount }
+        return {
+          ...bar.toObject(),
+          staffCount,
+        }
       })
     )
 
-    return NextResponse.json({ success: true, bars: barsWithStaff })
+    return NextResponse.json({ success: true, bars: barsWithStats })
   } catch (error) {
-    console.error('Get bars error:', error)
     return NextResponse.json({ success: false, message: 'Server error' }, { status: 500 })
   }
 }
 
+// POST — create new bar + admin user
 export async function POST(request) {
   try {
-    const user = getUserFromRequest(request)
-    if (!user || user.role !== 'superadmin') {
+    if (!isSuperAdmin(request)) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
     }
 
     await connectDB()
 
-    const { barName, barEmail, phone, taxRate, plan, adminName, adminEmail, adminPassword } = await request.json()
+    const { name, email, phone, address, adminName, adminEmail, adminPassword, plan, taxRate } = await request.json()
 
-    if (!barName || !barEmail || !adminName || !adminEmail || !adminPassword) {
-      return NextResponse.json({ success: false, message: 'All required fields must be filled.' }, { status: 400 })
+    if (!name || !email || !adminName || !adminEmail || !adminPassword) {
+      return NextResponse.json(
+        { success: false, message: 'All required fields must be filled' },
+        { status: 400 }
+      )
     }
 
-    const existingBar = await Bar.findOne({ email: barEmail })
+    // Check if bar email already exists
+    const existingBar = await Bar.findOne({ email })
     if (existingBar) {
-      return NextResponse.json({ success: false, message: 'A bar with this email already exists.' }, { status: 400 })
+      return NextResponse.json(
+        { success: false, message: 'A bar with this email already exists' },
+        { status: 400 }
+      )
     }
 
+    // Check if admin email already exists
     const existingUser = await User.findOne({ email: adminEmail })
     if (existingUser) {
-      return NextResponse.json({ success: false, message: 'A user with this email already exists.' }, { status: 400 })
+      return NextResponse.json(
+        { success: false, message: 'A user with this email already exists' },
+        { status: 400 }
+      )
     }
 
+    // Set subscription dates
+    const startDate = new Date()
+    const expiryDate = new Date()
+    if (plan === 'yearly') {
+      expiryDate.setFullYear(expiryDate.getFullYear() + 1)
+    } else {
+      expiryDate.setMonth(expiryDate.getMonth() + 1)
+    }
+
+    // Create bar
     const bar = await Bar.create({
-      name: barName,
-      email: barEmail,
+      name,
+      email,
       phone: phone || '',
-      taxRate: taxRate || 10,
+      address: address || '',
+      taxRate: taxRate || 0,
       subscription: {
-        status: plan === 'trial' ? 'trial' : 'active',
-        plan: plan || 'trial',
-        startDate: new Date(),
-        expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        status: 'active',
+        plan: plan || 'monthly',
+        startDate,
+        expiryDate,
       },
     })
 
+    // Create bar admin user
     await User.create({
       name: adminName,
       email: adminEmail,
@@ -75,7 +105,12 @@ export async function POST(request) {
       bar: bar._id,
     })
 
-    return NextResponse.json({ success: true, message: 'Bar and admin created successfully.', bar })
+    return NextResponse.json({
+      success: true,
+      message: 'Bar created successfully',
+      bar,
+    }, { status: 201 })
+
   } catch (error) {
     console.error('Create bar error:', error)
     return NextResponse.json({ success: false, message: 'Server error' }, { status: 500 })

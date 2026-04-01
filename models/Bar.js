@@ -42,12 +42,18 @@ const BarSchema = new mongoose.Schema({
     },
     expiryDate: {
       type: Date,
-      default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30-day trial
+      default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     },
   },
   taxRate: {
     type: Number,
-    default: 10, // Default tax rate (%)
+    default: 10,
+  },
+  // UK/EU → 'VAT' | USA → 'Sales Tax' | Canada → 'GST/HST' | Australia → 'GST'
+  taxType: {
+    type: String,
+    enum: ['VAT', 'Sales Tax', 'GST', 'HST', 'PST', 'None'],
+    default: 'VAT',
   },
   currency: {
     type: String,

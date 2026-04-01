@@ -18,12 +18,18 @@ const ProductSchema = new mongoose.Schema({
   },
   lowStockAlert: {
     type: Number,
-    default: 5, // Alert when stock falls to or below this number
+    default: 5,
   },
   unit: {
     type: String,
-    default: 'pcs', // e.g. bottle, glass, pint, pcs
+    default: 'pcs',
     trim: true,
+  },
+  barcode: {
+    type: String,
+    default: '',
+    trim: true,
+    // Unique per bar — enforced via compound index below
   },
   category: {
     type: mongoose.Schema.Types.ObjectId,
@@ -37,15 +43,17 @@ const ProductSchema = new mongoose.Schema({
   },
   isAvailable: {
     type: Boolean,
-    default: true, // Quick toggle to hide from POS without deleting
+    default: true,
   },
 }, {
   timestamps: true,
 })
 
-// Compound index for fast bar-scoped product queries
+// Compound indexes for fast bar-scoped queries
 ProductSchema.index({ bar: 1, category: 1 })
 ProductSchema.index({ bar: 1, isAvailable: 1 })
+// Barcode lookup — sparse so empty strings don't conflict
+ProductSchema.index({ bar: 1, barcode: 1 }, { sparse: true })
 
 const Product = mongoose.models.Product || mongoose.model('Product', ProductSchema)
 export default Product

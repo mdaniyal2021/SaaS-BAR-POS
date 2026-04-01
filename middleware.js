@@ -4,7 +4,7 @@ export function middleware(request) {
   const { pathname } = request.nextUrl
 
   // Public routes — freely accessible
-  const publicRoutes = ['/login', '/api/auth/login', '/api/auth/seed']
+  const publicRoutes = ['/login', '/api/auth/login', '/api/auth/logout']
   if (publicRoutes.some(route => pathname.startsWith(route))) {
     return NextResponse.next()
   }
@@ -25,16 +25,29 @@ export function middleware(request) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Manually decode JWT (jsonwebtoken is not supported in the Edge runtime)
+  // Decode JWT payload — signature is verified in each API route via getUserFromRequest()
+  // Middleware only handles routing/redirect logic based on role
   try {
-    const base64Payload = token.split('.')[1]
-    const payload = JSON.parse(atob(base64Payload))
+    const parts = token.split('.')
+    if (parts.length !== 3) {
+      throw new Error('Invalid token format')
+    }
+
+    // Add padding if needed for base64 decoding
+    const base64Payload = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64Payload + '='.repeat((4 - base64Payload.length % 4) % 4)
+    const payload = JSON.parse(atob(padded))
 
     // Check token expiry
     if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
       const response = NextResponse.redirect(new URL('/login', request.url))
       response.cookies.delete('token')
       return response
+    }
+
+    // Validate required fields exist in payload
+    if (!payload.role || !payload.id) {
+      throw new Error('Invalid token payload')
     }
 
     const role = payload.role
@@ -49,7 +62,7 @@ export function middleware(request) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
-    // Admin routes — only admin role allowed (cashier and superadmin are blocked)
+    // Admin routes — only admin role allowed
     const adminRoutes = ['/dashboard', '/pos', '/products', '/categories', '/inventory', '/staff', '/reports', '/settings']
     if (adminRoutes.some(route => pathname.startsWith(route))) {
       if (role === 'cashier') {

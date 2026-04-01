@@ -21,7 +21,7 @@ export async function PATCH(request, { params }) {
     return NextResponse.json({ success: false, message: 'Product not found' }, { status: 404 })
   }
 
-  const { name, price, stock, unit, lowStockAlert, categoryId, isAvailable } = await request.json()
+  const { name, price, stock, unit, lowStockAlert, categoryId, isAvailable, barcode } = await request.json()
 
   if (name !== undefined) {
     if (!name.trim()) return NextResponse.json({ success: false, message: 'Product name is required' }, { status: 400 })
@@ -31,10 +31,20 @@ export async function PATCH(request, { params }) {
     if (isNaN(price) || Number(price) < 0) return NextResponse.json({ success: false, message: 'Valid price is required' }, { status: 400 })
     product.price = Number(price)
   }
-  if (stock !== undefined) product.stock = Number(stock)
-  if (unit !== undefined) product.unit = unit.trim() || 'pcs'
+  if (stock !== undefined)         product.stock         = Number(stock)
+  if (unit !== undefined)          product.unit          = unit.trim() || 'pcs'
   if (lowStockAlert !== undefined) product.lowStockAlert = Number(lowStockAlert)
-  if (isAvailable !== undefined) product.isAvailable = Boolean(isAvailable)
+  if (isAvailable !== undefined)   product.isAvailable   = Boolean(isAvailable)
+
+  // Barcode update — check uniqueness within bar
+  if (barcode !== undefined) {
+    const trimmed = barcode.trim()
+    if (trimmed) {
+      const taken = await Product.findOne({ bar: user.barId, barcode: trimmed, _id: { $ne: id } })
+      if (taken) return NextResponse.json({ success: false, message: 'This barcode is already assigned to another product' }, { status: 400 })
+    }
+    product.barcode = trimmed
+  }
 
   if (categoryId !== undefined) {
     const category = await Category.findOne({ _id: categoryId, bar: user.barId })

@@ -1,17 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import {
+  MdLocalBar,
   MdDashboard,
   MdStorefront,
   MdSubscriptions,
   MdLogout,
   MdMenu,
-  MdLocalBar,
   MdClose,
 } from 'react-icons/md'
+import { FiChevronRight } from 'react-icons/fi'
 
 const navItems = [
   { label: 'Dashboard', href: '/superadmin/dashboard', icon: MdDashboard },
@@ -20,8 +20,8 @@ const navItems = [
 ]
 
 export default function SuperAdminLayout({ children }) {
-  const pathname = usePathname()
   const router = useRouter()
+  const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const handleLogout = async () => {
@@ -42,25 +42,24 @@ export default function SuperAdminLayout({ children }) {
 
       {/* Sidebar */}
       <aside className={`
-        fixed top-0 left-0 h-full w-64 bg-gray-900 border-r border-gray-800 z-30 flex flex-col
-        transition-transform duration-200
+        fixed top-0 left-0 h-full w-64 bg-gray-900 border-r border-gray-800 z-30
+        flex flex-col transition-transform duration-300
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 lg:static lg:z-auto
       `}>
+
         {/* Logo */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-800">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
-              <MdLocalBar className="text-white text-lg" />
-            </div>
-            <div>
-              <p className="text-white font-semibold text-sm leading-none">BarPOS</p>
-              <p className="text-gray-500 text-xs mt-0.5">Super Admin</p>
-            </div>
+        <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-800">
+          <div className="w-9 h-9 bg-purple-600 rounded-xl flex items-center justify-center shrink-0">
+            <MdLocalBar className="text-white text-xl" />
+          </div>
+          <div>
+            <p className="text-white font-semibold text-sm">BarPOS</p>
+            <p className="text-purple-400 text-xs">Super Admin</p>
           </div>
           <button
+            className="ml-auto lg:hidden text-gray-400 hover:text-white"
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden text-gray-400 hover:text-white"
           >
             <MdClose className="text-xl" />
           </button>
@@ -71,59 +70,60 @@ export default function SuperAdminLayout({ children }) {
           {navItems.map(({ label, href, icon: Icon }) => {
             const active = pathname === href
             return (
-              <Link
+              <button
                 key={href}
-                href={href}
-                onClick={() => setSidebarOpen(false)}
+                onClick={() => { router.push(href); setSidebarOpen(false) }}
                 className={`
-                  flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors
+                  w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left
                   ${active
-                    ? 'bg-purple-600/20 text-purple-400 border border-purple-500/30'
-                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                  }
+                    ? 'bg-purple-600 text-white'
+                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'}
                 `}
               >
                 <Icon className="text-lg shrink-0" />
-                {label}
-              </Link>
+                <span className="flex-1">{label}</span>
+                {active && <FiChevronRight className="text-sm" />}
+              </button>
             )
           })}
         </nav>
 
         {/* Logout */}
-        <div className="px-3 py-4 border-t border-gray-800">
+        <div className="px-3 pb-4 border-t border-gray-800 pt-4">
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
           >
-            <MdLogout className="text-lg shrink-0" />
-            Logout
+            <MdLogout className="text-lg" />
+            <span>Logout</span>
           </button>
         </div>
       </aside>
 
-      {/* Main content */}
+      {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar (mobile) */}
-        <header className="lg:hidden flex items-center gap-4 px-4 py-4 border-b border-gray-800 bg-gray-900">
+
+        {/* Top bar */}
+        <header className="bg-gray-900 border-b border-gray-800 px-4 py-3 flex items-center gap-3 lg:px-6">
           <button
+            className="lg:hidden text-gray-400 hover:text-white"
             onClick={() => setSidebarOpen(true)}
-            className="text-gray-400 hover:text-white"
           >
             <MdMenu className="text-2xl" />
           </button>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-purple-600 rounded-md flex items-center justify-center">
-              <MdLocalBar className="text-white text-sm" />
-            </div>
-            <span className="text-white font-semibold text-sm">BarPOS</span>
+          <div>
+            <h1 className="text-white font-semibold text-sm">
+              {navItems.find(n => n.href === pathname)?.label || 'Super Admin'}
+            </h1>
+            <p className="text-gray-500 text-xs">BarPOS Control Panel</p>
           </div>
         </header>
 
-        <main className="flex-1 p-6">
+        {/* Page content */}
+        <main className="flex-1 p-4 lg:p-6 overflow-auto">
           {children}
         </main>
       </div>
     </div>
   )
-}
+} 

@@ -3,6 +3,9 @@ import connectDB from '@/lib/db'
 import { getUserFromRequest } from '@/lib/auth'
 import Bar from '@/models/Bar'
 import User from '@/models/User'
+import Category from '@/models/Category'
+import Product from '@/models/Product'
+import Order from '@/models/Order'
 
 export async function PATCH(request, { params }) {
   try {
@@ -75,10 +78,20 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ success: false, message: 'Bar not found.' }, { status: 404 })
     }
 
-    await User.deleteMany({ bar: id })
+    // CASCADE DELETE — remove everything belonging to this bar
+    await Promise.all([
+      User.deleteMany({ bar: id }),
+      Category.deleteMany({ bar: id }),
+      Product.deleteMany({ bar: id }),
+      Order.deleteMany({ bar: id }),
+    ])
+
     await Bar.findByIdAndDelete(id)
 
-    return NextResponse.json({ success: true, message: 'Bar and all associated users deleted successfully.' })
+    return NextResponse.json({
+      success: true,
+      message: 'Bar and all associated data deleted successfully.'
+    })
   } catch (error) {
     console.error('Delete bar error:', error)
     return NextResponse.json({ success: false, message: 'Server error' }, { status: 500 })
