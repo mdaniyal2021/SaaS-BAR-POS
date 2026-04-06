@@ -198,7 +198,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Payment method breakdown ─────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-4">
+      {/* <div className="grid grid-cols-2 gap-4">
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 flex items-center gap-4">
           <div className="w-10 h-10 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center justify-center shrink-0">
             <MdLocalAtm className="text-green-400 text-xl" />
@@ -217,17 +217,16 @@ export default function DashboardPage() {
             <p className="text-white text-xl font-bold mt-0.5">{today.cardOrders}</p>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* ── Chart + Low Stock ────────────────────────────────────────────────── */}
+      {/* 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-        {/* Weekly chart — takes 2/3 width on large screens */}
         <div className="lg:col-span-2">
           <WeeklyChart data={weeklyChart} />
         </div>
 
-        {/* Low stock alert — 1/3 */}
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-white font-semibold text-sm">Low Stock Alert</h2>
@@ -245,7 +244,9 @@ export default function DashboardPage() {
                 <div key={product._id} className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-white text-sm font-medium truncate">{product.name}</p>
-                    <p className="text-gray-500 text-xs">Alert at {product.lowStockAlert} {product.unit}</p>
+                    <p className="text-gray-500 text-xs">
+                      Alert at {product.lowStockAlert} {product.unit}
+                    </p>
                   </div>
                   <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full border ${
                     product.stock === 0
@@ -261,29 +262,30 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Quick count cards ────────────────────────────────────────────────── */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: 'Total Products',   value: counts.products,   icon: MdStorefront, color: 'purple' },
-          { label: 'Categories',       value: counts.categories, icon: MdCategory,   color: 'blue'   },
-          { label: 'Active Cashiers',  value: counts.staff,      icon: MdPeople,     color: 'green'  },
+          { label: 'Total Products', value: counts.products, icon: MdStorefront, color: 'purple' },
+          { label: 'Categories', value: counts.categories, icon: MdCategory, color: 'blue' },
+          { label: 'Active Cashiers', value: counts.staff, icon: MdPeople, color: 'green' },
         ].map(({ label, value, icon: Icon, color }) => {
           const cls = {
             purple: 'bg-purple-500/10 border-purple-500/20 text-purple-400',
-            blue:   'bg-blue-500/10   border-blue-500/20   text-blue-400',
-            green:  'bg-green-500/10  border-green-500/20  text-green-400',
-          }[color]
-          return (
-            <div key={label} className={`${cls} border rounded-2xl p-4 flex items-center gap-3`}>
-              <Icon className="text-2xl shrink-0" />
-              <div>
-                <p className="text-xs text-gray-400">{label}</p>
-                <p className="text-lg font-bold text-white">{value}</p>
-              </div>
-            </div>
-          )
-        })}
+      blue: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
+      green: 'bg-green-500/10 border-green-500/20 text-green-400',
+    }[color]
+
+    return (
+      <div key={label} className={`${cls} border rounded-2xl p-4 flex items-center gap-3`}>
+        <Icon className="text-2xl shrink-0" />
+        <div>
+          <p className="text-xs text-gray-400">{label}</p>
+          <p className="text-lg font-bold text-white">{value}</p>
+        </div>
       </div>
+    )
+  })}
+</div>
+*/}
 
       {/* ── Recent Orders ────────────────────────────────────────────────────── */}
       <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
