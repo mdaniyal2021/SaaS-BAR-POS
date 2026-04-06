@@ -55,7 +55,7 @@ export default function LoginPage() {
         {/* Brand */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-600 rounded-2xl mb-4 shadow-lg shadow-purple-900/50">
-            <MdLocalBar className="text-white text-3xl" />
+            <img src="/icons/icon-192x192.png" alt="BarPOS" className="w-10 h-10 object-contain" />
           </div>
           <h1 className="text-2xl font-bold text-white">BarPOS</h1>
           <p className="text-gray-400 text-sm mt-1">Bar Management System</p>
@@ -142,7 +142,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-gray-600 text-xs mt-6">
-          © 2024 BarPOS — All rights reserved
+          © 2026 BarPOS — All rights reserved
         </p>
       </div>
     </div>

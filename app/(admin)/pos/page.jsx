@@ -377,7 +377,7 @@ export default function POSPage() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 bg-purple-600 rounded-lg flex items-center justify-center shrink-0">
-              <MdLocalBar className="text-white text-sm" />
+              <img src="/icons/icon-192x192.png" alt="BarPOS" className="w-4 h-4 object-contain" />
             </div>
             <span className="text-white font-bold text-lg">POS</span>
           </div>

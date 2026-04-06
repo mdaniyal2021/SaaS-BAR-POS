@@ -51,7 +51,7 @@ export default function SuperAdminLayout({ children }) {
         {/* Logo */}
         <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-800">
           <div className="w-9 h-9 bg-purple-600 rounded-xl flex items-center justify-center shrink-0">
-            <MdLocalBar className="text-white text-xl" />
+            <img src="/icons/icon-192x192.png" alt="BarPOS" className="w-6 h-6 object-contain" />
           </div>
           <div>
             <p className="text-white font-semibold text-sm">BarPOS</p>

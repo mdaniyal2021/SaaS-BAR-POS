@@ -62,7 +62,7 @@ export default function AdminLayout({ children }) {
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-800">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
-              <MdLocalBar className="text-white text-lg" />
+              <img src="/icons/icon-192x192.png" alt="BarPOS" className="w-5 h-5 object-contain" />
             </div>
             <div>
               <p className="text-white font-semibold text-sm leading-none">BarPOS</p>
@@ -126,7 +126,7 @@ export default function AdminLayout({ children }) {
           </button>
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 bg-purple-600 rounded-md flex items-center justify-center">
-              <MdLocalBar className="text-white text-sm" />
+              <img src="/icons/icon-192x192.png" alt="BarPOS" className="w-4 h-4 object-contain" />
             </div>
             <span className="text-white font-semibold text-sm">BarPOS</span>
           </div>
