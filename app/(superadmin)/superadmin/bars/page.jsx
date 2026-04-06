@@ -11,6 +11,10 @@ import {
   MdSearch,
   MdToggleOn,
   MdToggleOff,
+  MdPeople,
+  MdPerson,
+  MdVisibility,
+  MdVisibilityOff,
 } from 'react-icons/md'
 import { FiAlertCircle, FiCheck } from 'react-icons/fi'
 
@@ -51,6 +55,8 @@ const emptyForm = {
   plan: 'monthly', taxRate: 0,
 }
 
+const emptyStaffForm = { name: '', email: '', password: '' }
+
 export default function BarsPage() {
   const [bars, setBars] = useState([])
   const [loading, setLoading] = useState(true)
@@ -60,6 +66,15 @@ export default function BarsPage() {
   const [submitting, setSubmitting] = useState(false)
   const [toast, setToast] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
+
+  // Staff management state
+  const [staffBar, setStaffBar] = useState(null)         // bar whose staff panel is open
+  const [barStaff, setBarStaff] = useState([])
+  const [staffLoading, setStaffLoading] = useState(false)
+  const [staffForm, setStaffForm] = useState(emptyStaffForm)
+  const [staffSubmitting, setStaffSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [staffDeleteConfirm, setStaffDeleteConfirm] = useState(null)
 
   const showToast = (message, type = 'success') => setToast({ message, type })
 
@@ -131,6 +146,68 @@ export default function BarsPage() {
       }
     } catch {
       showToast('Failed to delete bar', 'error')
+    }
+  }
+
+  // ── Staff management handlers ───────────────────────────────────────────────
+  const openStaffPanel = async (bar) => {
+    setStaffBar(bar)
+    setStaffForm(emptyStaffForm)
+    setStaffLoading(true)
+    try {
+      const res = await fetch(`/api/superadmin/bars/${bar._id}/staff`)
+      const data = await res.json()
+      if (data.success) setBarStaff(data.staff)
+    } catch {
+      showToast('Failed to load staff', 'error')
+    } finally {
+      setStaffLoading(false)
+    }
+  }
+
+  const handleAddStaff = async (e) => {
+    e.preventDefault()
+    setStaffSubmitting(true)
+    try {
+      const res = await fetch(`/api/superadmin/bars/${staffBar._id}/staff`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(staffForm),
+      })
+      const data = await res.json()
+      if (data.success) {
+        showToast('Cashier added successfully')
+        setBarStaff(prev => [data.staff, ...prev])
+        setStaffForm(emptyStaffForm)
+        fetchBars()
+      } else {
+        showToast(data.message, 'error')
+      }
+    } catch {
+      showToast('Failed to add cashier', 'error')
+    } finally {
+      setStaffSubmitting(false)
+    }
+  }
+
+  const handleDeleteStaff = async (cashierId) => {
+    try {
+      const res = await fetch(`/api/superadmin/bars/${staffBar._id}/staff`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cashierId }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        showToast('Cashier removed')
+        setBarStaff(prev => prev.filter(s => s._id !== cashierId))
+        setStaffDeleteConfirm(null)
+        fetchBars()
+      } else {
+        showToast(data.message, 'error')
+      }
+    } catch {
+      showToast('Failed to remove cashier', 'error')
     }
   }
 
@@ -230,6 +307,13 @@ export default function BarsPage() {
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => openStaffPanel(bar)}
+                          className="flex items-center gap-1.5 text-xs font-medium text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 px-3 py-1.5 rounded-lg transition-colors"
+                          title="Manage Staff"
+                        >
+                          <MdPeople className="text-sm" /> Staff
+                        </button>
                         <button
                           onClick={() => handleToggle(bar._id)}
                           className="p-2 rounded-lg hover:bg-gray-700 transition-colors"
@@ -414,6 +498,130 @@ export default function BarsPage() {
                 className="flex-1 bg-red-600 hover:bg-red-500 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors"
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Staff Management Modal ───────────────────────────────────────────── */}
+      {staffBar && (
+        <div className="fixed inset-0 bg-black/70 z-40 flex items-center justify-center p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800 shrink-0">
+              <div>
+                <h3 className="text-white font-semibold">Manage Staff</h3>
+                <p className="text-gray-500 text-xs mt-0.5">{staffBar.name}</p>
+              </div>
+              <button onClick={() => { setStaffBar(null); setBarStaff([]) }} className="text-gray-400 hover:text-white">
+                <MdClose className="text-2xl" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+
+              {/* Add cashier form */}
+              <form onSubmit={handleAddStaff} className="bg-gray-800/50 border border-gray-700 rounded-xl p-4 space-y-3">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Add New Cashier</p>
+                <input
+                  type="text"
+                  required
+                  placeholder="Full Name"
+                  value={staffForm.name}
+                  onChange={e => setStaffForm(p => ({ ...p, name: e.target.value }))}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm"
+                />
+                <input
+                  type="email"
+                  required
+                  placeholder="Email Address"
+                  value={staffForm.email}
+                  onChange={e => setStaffForm(p => ({ ...p, email: e.target.value }))}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm"
+                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    placeholder="Password (min 6 chars)"
+                    value={staffForm.password}
+                    onChange={e => setStaffForm(p => ({ ...p, password: e.target.value }))}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 pr-11 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm"
+                  />
+                  <button type="button" onClick={() => setShowPassword(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+                    {showPassword ? <MdVisibilityOff className="text-lg" /> : <MdVisibility className="text-lg" />}
+                  </button>
+                </div>
+                <button
+                  type="submit"
+                  disabled={staffSubmitting}
+                  className="w-full bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  {staffSubmitting
+                    ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Adding...</>
+                    : <><MdAdd className="text-base" /> Add Cashier</>}
+                </button>
+              </form>
+
+              {/* Staff list */}
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                  Current Staff ({barStaff.length})
+                </p>
+                {staffLoading ? (
+                  <div className="flex justify-center py-6">
+                    <div className="w-6 h-6 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
+                  </div>
+                ) : barStaff.length === 0 ? (
+                  <div className="text-center py-6">
+                    <MdPeople className="text-3xl text-gray-700 mx-auto mb-2" />
+                    <p className="text-gray-500 text-sm">No cashiers yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {barStaff.map(member => (
+                      <div key={member._id} className="flex items-center justify-between gap-3 bg-gray-800/50 border border-gray-700 rounded-xl px-4 py-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-8 h-8 bg-purple-500/10 border border-purple-500/20 rounded-lg flex items-center justify-center shrink-0">
+                            <MdPerson className="text-purple-400 text-sm" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-white text-sm font-medium truncate">{member.name}</p>
+                            <p className="text-gray-500 text-xs truncate">{member.email}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setStaffDeleteConfirm(member)}
+                          className="shrink-0 p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
+                        >
+                          <MdDelete className="text-lg" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Staff Delete Confirm */}
+      {staffDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-sm p-6">
+            <h3 className="text-white font-semibold text-center mb-2">Remove Cashier</h3>
+            <p className="text-gray-400 text-sm text-center mb-5">
+              Remove <span className="text-white font-medium">{staffDeleteConfirm.name}</span> from {staffBar?.name}?
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setStaffDeleteConfirm(null)} className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium py-2.5 rounded-xl text-sm transition-colors">
+                Cancel
+              </button>
+              <button onClick={() => handleDeleteStaff(staffDeleteConfirm._id)} className="flex-1 bg-red-600 hover:bg-red-500 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors">
+                Remove
               </button>
             </div>
           </div>

@@ -52,72 +52,153 @@ function NumPad({ value, onChange, onClose, onConfirm, label, prefix = '$' }) {
 
 // ─── Receipt Modal ────────────────────────────────────────────────────────────
 function ReceiptModal({ receipt, onNewOrder }) {
+  const fmtDateTime = (iso) => {
+    const d = new Date(iso)
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+      + '  ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+  }
+
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-sm">
-        <div className="text-center p-6 border-b border-gray-800">
-          <div className="w-12 h-12 bg-green-500/20 border border-green-500/30 rounded-full flex items-center justify-center mx-auto mb-3">
-            <MdCheck className="text-green-400 text-2xl" />
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 no-print">
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-sm flex flex-col max-h-[90vh]">
+
+        {/* Screen-only header */}
+        <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-800 no-print">
+          <div className="w-7 h-7 bg-green-500/20 border border-green-500/30 rounded-full flex items-center justify-center">
+            <MdCheck className="text-green-400 text-base" />
           </div>
-          <h2 className="text-white font-bold text-lg">Order Complete!</h2>
-          <p className="text-gray-400 text-sm mt-1">{receipt.orderNumber}</p>
+          <span className="text-white font-semibold text-sm">Order Complete</span>
         </div>
-        <div className="p-5 space-y-4 max-h-80 overflow-y-auto">
-          <div className="text-center">
-            <p className="text-white font-semibold">{receipt.barName}</p>
-            <p className="text-gray-500 text-xs mt-0.5">{new Date(receipt.createdAt).toLocaleString('en-GB')}</p>
+
+        {/* ── Printable slip ── */}
+        <div id="receipt-slip" className="p-5 overflow-y-auto flex-1 font-mono text-xs space-y-3">
+
+          {/* Header */}
+          <div className="text-center space-y-0.5">
+            <img src="/icons/icon-192x192.png" alt="logo" className="w-10 h-10 mx-auto mb-2 rounded-lg" />
+            <p className="text-white font-bold text-base">{receipt.barName}</p>
+            {receipt.barAddress && <p className="text-gray-400">{receipt.barAddress}</p>}
+            {receipt.barPhone   && <p className="text-gray-400">{receipt.barPhone}</p>}
           </div>
-          <div className="border-t border-dashed border-gray-700" />
-          <div className="space-y-2">
+
+          <div className="border-t border-dashed border-gray-600" />
+
+          {/* Invoice info */}
+          <div className="space-y-1">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Invoice #</span>
+              <span className="text-white font-bold">{receipt.orderNumber}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Date & Time</span>
+              <span className="text-gray-300">{fmtDateTime(receipt.createdAt)}</span>
+            </div>
+            {receipt.cashier && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">Cashier</span>
+                <span className="text-gray-300">{receipt.cashier}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-dashed border-gray-600" />
+
+          {/* Items table */}
+          <div className="space-y-0.5">
+            <div className="flex text-gray-500 text-xs pb-1">
+              <span className="flex-1">Item</span>
+              <span className="w-8 text-center">Qty</span>
+              <span className="w-14 text-right">Price</span>
+              <span className="w-16 text-right">Total</span>
+            </div>
             {receipt.items.map((item, i) => (
-              <div key={i} className="flex justify-between text-sm">
-                <span className="text-gray-300">{item.name} <span className="text-gray-500">×{item.quantity}</span></span>
-                <span className="text-white font-medium">{fmt(item.subtotal)}</span>
+              <div key={i} className="flex text-gray-300">
+                <span className="flex-1 truncate pr-1">{item.name}</span>
+                <span className="w-8 text-center">{item.quantity}</span>
+                <span className="w-14 text-right">{fmt(item.price)}</span>
+                <span className="w-16 text-right text-white">{fmt(item.subtotal)}</span>
               </div>
             ))}
           </div>
-          <div className="border-t border-dashed border-gray-700" />
-          <div className="space-y-1.5 text-sm">
-            <div className="flex justify-between text-gray-400"><span>Subtotal</span><span>{fmt(receipt.subtotal)}</span></div>
+
+          <div className="border-t border-dashed border-gray-600" />
+
+          {/* Billing summary */}
+          <div className="space-y-1">
+            <div className="flex justify-between text-gray-400">
+              <span>Subtotal</span><span>{fmt(receipt.subtotal)}</span>
+            </div>
             {receipt.discountAmount > 0 && (
               <div className="flex justify-between text-green-400">
                 <span>Discount {receipt.discountType === 'percent' ? `(${receipt.discountValue}%)` : '(fixed)'}</span>
                 <span>- {fmt(receipt.discountAmount)}</span>
               </div>
             )}
-            <div className="flex justify-between text-gray-400"><span>VAT ({receipt.taxRate}%)</span><span>{fmt(receipt.tax)}</span></div>
-            <div className="flex justify-between text-white font-bold text-base mt-1"><span>Total</span><span>{fmt(receipt.total)}</span></div>
+            <div className="flex justify-between text-gray-400">
+              <span>{receipt.taxType || 'VAT'} ({receipt.taxRate}%)</span>
+              <span>{fmt(receipt.tax)}</span>
+            </div>
+            <div className="flex justify-between text-white font-bold text-sm border-t border-gray-600 pt-1 mt-1">
+              <span>Grand Total</span><span>{fmt(receipt.total)}</span>
+            </div>
           </div>
-          <div className="border-t border-dashed border-gray-700" />
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-400">Payment</span>
-            <span className={`font-medium capitalize ${receipt.paymentMethod === 'cash' ? 'text-green-400' : 'text-blue-400'}`}>{receipt.paymentMethod}</span>
+
+          <div className="border-t border-dashed border-gray-600" />
+
+          {/* Payment */}
+          <div className="space-y-1">
+            <div className="flex justify-between text-gray-400">
+              <span>Payment</span>
+              <span className={`capitalize font-medium ${receipt.paymentMethod === 'cash' ? 'text-green-400' : 'text-blue-400'}`}>
+                {receipt.paymentMethod}
+              </span>
+            </div>
+            {receipt.cashReceived > 0 && receipt.paymentMethod === 'cash' && (
+              <>
+                <div className="flex justify-between text-gray-400">
+                  <span>Cash Received</span><span className="text-white">{fmt(receipt.cashReceived)}</span>
+                </div>
+                <div className="flex justify-between text-gray-400">
+                  <span>Change Returned</span>
+                  <span className="text-green-400 font-medium">{fmt(Math.max(0, receipt.cashReceived - receipt.total))}</span>
+                </div>
+              </>
+            )}
           </div>
-          {receipt.cashReceived > 0 && receipt.paymentMethod === 'cash' && (
+
+          {receipt.notes && (
             <>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Cash Received</span><span className="text-white">{fmt(receipt.cashReceived)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Change</span>
-                <span className="text-green-400 font-medium">{fmt(Math.max(0, receipt.cashReceived - receipt.total))}</span>
-              </div>
+              <div className="border-t border-dashed border-gray-600" />
+              <p className="text-gray-500 italic">Note: {receipt.notes}</p>
             </>
           )}
-          {receipt.cashier && (
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Cashier</span><span className="text-white">{receipt.cashier}</span>
-            </div>
-          )}
+
+          <div className="border-t border-dashed border-gray-600" />
+
+          {/* Footer */}
+          <div className="text-center space-y-0.5 pb-1">
+            <p className="text-white font-semibold">Thank you for your visit!</p>
+            <p className="text-gray-500">Please come again</p>
+          </div>
+
         </div>
-        <div className="p-5 border-t border-gray-800 flex gap-3">
-          <button onClick={() => window.print()} className="flex-1 flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium py-3 rounded-xl transition-colors">
+
+        {/* Action buttons */}
+        <div className="p-5 border-t border-gray-800 flex gap-3 no-print">
+          <button
+            onClick={() => window.print()}
+            className="flex-1 flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium py-3 rounded-xl transition-colors"
+          >
             <MdPrint /> Print
           </button>
-          <button onClick={onNewOrder} className="flex-1 flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-bold py-3 rounded-xl transition-colors">
+          <button
+            onClick={onNewOrder}
+            className="flex-1 flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-bold py-3 rounded-xl transition-colors"
+          >
             <MdShoppingCart /> New Order
           </button>
         </div>
+
       </div>
     </div>
   )

@@ -132,6 +132,7 @@ export async function POST(request) {
         orderNumber:    order.orderNumber,
         barName:        bar.name,
         barAddress:     bar.address || '',
+        barPhone:       bar.phone || '',
         items:          orderItems,
         subtotal:       order.subtotal,
         discountAmount: safeDiscount,
@@ -144,6 +145,7 @@ export async function POST(request) {
         total:          order.total,
         paymentMethod:  order.paymentMethod,
         cashier:        order.cashier?.name,
+        notes:          notes || '',
         createdAt:      order.createdAt,
       },
     }, { status: 201 })

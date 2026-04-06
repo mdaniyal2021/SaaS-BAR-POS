@@ -230,12 +230,18 @@ export default function StaffPage() {
           <h1 className="text-2xl font-bold text-white">Staff</h1>
           <p className="text-gray-400 text-sm mt-1">Manage cashier accounts for your bar</p>
         </div>
-        <button
-          onClick={openAdd}
-          className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
-        >
-          <MdAdd className="text-lg" /> Add Cashier
-        </button>
+        {staff.length === 0 ? (
+          <button
+            onClick={openAdd}
+            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
+          >
+            <MdAdd className="text-lg" /> Add Cashier
+          </button>
+        ) : (
+          <div className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-4 py-2.5 rounded-xl max-w-xs text-right">
+            1 cashier limit reached. Contact superadmin to add more.
+          </div>
+        )}
       </div>
 
       {/* Stat cards */}

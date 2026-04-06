@@ -46,6 +46,15 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: 'Password must be at least 6 characters' }, { status: 400 })
     }
 
+    // Enforce 1 cashier limit for admin
+    const cashierCount = await User.countDocuments({ bar: user.barId, role: 'cashier' })
+    if (cashierCount >= 1) {
+      return NextResponse.json(
+        { success: false, message: 'You can only have 1 cashier. Contact superadmin to add more staff.' },
+        { status: 403 }
+      )
+    }
+
     // Check if email already exists anywhere in the system
     const existing = await User.findOne({ email: email.toLowerCase().trim() })
     if (existing) {
