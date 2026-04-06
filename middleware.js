@@ -9,11 +9,14 @@ export function middleware(request) {
     return NextResponse.next()
   }
 
-  // Skip static files
+  // Skip static files and PWA assets
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
-    pathname.startsWith('/public')
+    pathname.startsWith('/public') ||
+    pathname.startsWith('/icons/') ||
+    pathname === '/manifest.json' ||
+    pathname === '/sw.js'
   ) {
     return NextResponse.next()
   }
