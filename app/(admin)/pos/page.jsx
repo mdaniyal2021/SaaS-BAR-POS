@@ -10,8 +10,8 @@ import {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n) => `$${Number(n ?? 0).toFixed(2)}`
 
-// ─── Numeric Keypad (touch-friendly) ─────────────────────────────────────────
-function NumPad({ value, onChange, onClose, onConfirm, label }) {
+// ─── Numeric Keypad (touch-friendly) — used for BOTH cash & discount ─────────
+function NumPad({ value, onChange, onClose, onConfirm, label, prefix = '$' }) {
   const press = (key) => {
     if (key === '⌫') {
       onChange(value.slice(0, -1) || '0')
@@ -37,7 +37,7 @@ function NumPad({ value, onChange, onClose, onConfirm, label }) {
 
         <div className="bg-gray-800 rounded-xl px-4 py-3 mb-4 text-right">
           <p className="text-gray-500 text-xs mb-0.5">Amount</p>
-          <p className="text-white text-2xl font-bold font-mono">${value}</p>
+          <p className="text-white text-2xl font-bold font-mono">{prefix}{value}</p>
         </div>
 
         <div className="grid grid-cols-3 gap-2 mb-3">
@@ -197,33 +197,37 @@ function ReceiptModal({ receipt, onClose, onNewOrder }) {
 // ─── Main POS Page ────────────────────────────────────────────────────────────
 export default function POSPage() {
 
-  // ── Data state ──────────────────────────────────────────────────────────────
+  // ── Data state ─────────────────────────────────────────────────────────────
   const [categories, setCategories] = useState([])
   const [products,   setProducts]   = useState([])
   const [loading,    setLoading]    = useState(true)
 
-  // ── UI state ─────────────────────────────────────────────────────────────────
+  // ── UI state ──────────────────────────────────────────────────────────────
   const [activeCategory, setActiveCategory] = useState('all')
   const [search,         setSearch]         = useState('')
   const [cart,           setCart]           = useState([])
 
-  // ── Discount state ────────────────────────────────────────────────────────────
+  // ── Discount state ────────────────────────────────────────────────────────
   const [discountType,  setDiscountType]  = useState('percent')
-  const [discountValue, setDiscountValue] = useState('')
+  const [discountValue, setDiscountValue] = useState('0')
 
-  // ── Payment state ────────────────────────────────────────────────────────────
-  const [payModal,   setPayModal]   = useState(false)
-  const [payMethod,  setPayMethod]  = useState('cash')
-  const [cashInput,  setCashInput]  = useState('0')
-  const [showNumPad, setShowNumPad] = useState(false)
-  const [placing,    setPlacing]    = useState(false)
-  const [receipt,    setReceipt]    = useState(null)
-  const [error,      setError]      = useState('')
+  // ── NumPad state — shared for cash AND discount ───────────────────────────
+  // target: 'cash' | 'discount'
+  const [showNumPad,   setShowNumPad]   = useState(false)
+  const [numPadTarget, setNumPadTarget] = useState('cash')
 
-  // ── Notes ────────────────────────────────────────────────────────────────────
+  // ── Payment state ─────────────────────────────────────────────────────────
+  const [payModal,  setPayModal]  = useState(false)
+  const [payMethod, setPayMethod] = useState('cash')
+  const [cashInput, setCashInput] = useState('0')
+  const [placing,   setPlacing]   = useState(false)
+  const [receipt,   setReceipt]   = useState(null)
+  const [error,     setError]     = useState('')
+
+  // ── Notes ─────────────────────────────────────────────────────────────────
   const [notes, setNotes] = useState('')
 
-  // ── Load products & categories ───────────────────────────────────────────────
+  // ── Load products & categories ────────────────────────────────────────────
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
@@ -241,7 +245,7 @@ export default function POSPage() {
 
   useEffect(() => { loadData() }, [loadData])
 
-  // ── Cart helpers ─────────────────────────────────────────────────────────────
+  // ── Cart helpers ──────────────────────────────────────────────────────────
   const addToCart = (product) => {
     if (product.stock <= 0) return
     setCart(prev => {
@@ -273,11 +277,11 @@ export default function POSPage() {
     setCart([])
     setNotes('')
     setError('')
-    setDiscountValue('')
+    setDiscountValue('0')
     setDiscountType('percent')
   }
 
-  // ── Calculations ──────────────────────────────────────────────────────────────
+  // ── Calculations ──────────────────────────────────────────────────────────
   const TAX_RATE = 10
 
   const cartCount = cart.reduce((s, i) => s + i.quantity, 0)
@@ -295,7 +299,7 @@ export default function POSPage() {
   const cashPaid  = parseFloat(cashInput) || 0
   const changeAmt = Math.max(0, cashPaid - totalDisplay)
 
-  // ── Filtered products ─────────────────────────────────────────────────────────
+  // ── Filtered products ─────────────────────────────────────────────────────
   const filteredProducts = products.filter(p => {
     if (!p.isAvailable) return false
     const matchCat = activeCategory === 'all' || p.category?._id === activeCategory
@@ -303,7 +307,25 @@ export default function POSPage() {
     return matchCat && matchQ
   })
 
-  // ── Place order ───────────────────────────────────────────────────────────────
+  // ── NumPad helpers ────────────────────────────────────────────────────────
+  const openNumPad = (target) => {
+    setNumPadTarget(target)
+    setShowNumPad(true)
+  }
+
+  const currentNumPadValue = numPadTarget === 'cash' ? cashInput : discountValue
+  const currentNumPadPrefix = numPadTarget === 'cash' ? '$' : (discountType === 'percent' ? '' : '$')
+  const currentNumPadSuffix = numPadTarget === 'discount' && discountType === 'percent' ? '%' : ''
+  const currentNumPadLabel = numPadTarget === 'cash'
+    ? 'Enter cash received'
+    : `Enter discount (${discountType === 'percent' ? 'percentage' : 'fixed amount'})`
+
+  const handleNumPadChange = (val) => {
+    if (numPadTarget === 'cash') setCashInput(val)
+    else setDiscountValue(val)
+  }
+
+  // ── Place order ───────────────────────────────────────────────────────────
   const placeOrder = async () => {
     if (cart.length === 0) return
     setPlacing(true)
@@ -322,14 +344,17 @@ export default function POSPage() {
           cashReceived:  payMethod === 'cash' ? cashPaid : 0,
           notes,
           discountType,
-          discountValue:  discountAmount,
-          discountRawVal: discountRaw,
+          discountValue:  discountAmount,   // calculated dollar amount
+          discountRawVal: discountRaw,      // raw input (% or $)
         }),
       })
       const data = await res.json()
 
       if (data.success) {
-        setReceipt(data.receipt)
+        setReceipt({
+          ...data.receipt,
+          cashReceived: payMethod === 'cash' ? cashPaid : 0,
+        })
         setPayModal(false)
         clearCart()
         setCashInput('0')
@@ -344,13 +369,13 @@ export default function POSPage() {
     }
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="flex h-[calc(100vh-theme(spacing.6)*2-theme(spacing.16))] gap-4 -m-6 p-4 bg-gray-950 min-h-screen">
 
-      {/* ══════════════════════════════════════════════════════
+      {/* ════════════════════════════════════════════════
           LEFT — Categories + Products
-      ══════════════════════════════════════════════════════ */}
+      ════════════════════════════════════════════════ */}
       <div className="flex-1 flex flex-col min-w-0 gap-3">
 
         {/* Top bar */}
@@ -438,25 +463,20 @@ export default function POSPage() {
                         {inCart.quantity}
                       </span>
                     )}
-
                     {outOfStock && (
                       <span className="absolute top-2 left-2 bg-red-500/20 text-red-400 text-xs px-1.5 py-0.5 rounded-md border border-red-500/20">
                         Out
                       </span>
                     )}
-
                     <div className="w-10 h-10 bg-gray-800 border border-gray-700 rounded-xl flex items-center justify-center mb-3 text-lg">
                       🍺
                     </div>
-
                     <p className="text-white text-sm font-semibold leading-tight line-clamp-2 mb-1">
                       {product.name}
                     </p>
-
                     <p className="text-purple-400 font-bold text-sm">
                       {fmt(product.price)}
                     </p>
-
                     <p className={`text-xs mt-1 ${
                       outOfStock ? 'text-red-400' : lowStock ? 'text-amber-400' : 'text-gray-600'
                     }`}>
@@ -475,9 +495,9 @@ export default function POSPage() {
         </div>
       </div>
 
-      {/* ══════════════════════════════════════════════════════
+      {/* ════════════════════════════════════════════════
           RIGHT — Cart / Order Summary
-      ══════════════════════════════════════════════════════ */}
+      ════════════════════════════════════════════════ */}
       <div className="w-80 shrink-0 flex flex-col bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
 
         {/* Cart header */}
@@ -487,10 +507,7 @@ export default function POSPage() {
             <span className="text-white font-semibold text-sm">Current Order</span>
           </div>
           {cart.length > 0 && (
-            <button
-              onClick={clearCart}
-              className="text-xs text-red-400 hover:text-red-300 transition-colors"
-            >
+            <button onClick={clearCart} className="text-xs text-red-400 hover:text-red-300 transition-colors">
               Clear
             </button>
           )}
@@ -519,7 +536,6 @@ export default function POSPage() {
                     <MdDelete className="text-base" />
                   </button>
                 </div>
-
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <button
@@ -539,7 +555,6 @@ export default function POSPage() {
                       <MdAdd className="text-sm" />
                     </button>
                   </div>
-
                   <span className="text-purple-400 font-bold text-sm">
                     {fmt(item.product.price * item.quantity)}
                   </span>
@@ -562,7 +577,7 @@ export default function POSPage() {
           </div>
         )}
 
-        {/* Order Summary + Discount */}
+        {/* ── Order Summary + Discount ────────────────────────────────────── */}
         <div className="px-4 py-3 border-t border-gray-800 space-y-2.5">
 
           {/* Subtotal row */}
@@ -571,14 +586,16 @@ export default function POSPage() {
             <span className="text-gray-400">{fmt(subtotal)}</span>
           </div>
 
-          {/* Discount input */}
+          {/* Discount section — touch-friendly numpad button */}
           {cart.length > 0 && (
             <div className="space-y-1.5">
               <p className="text-gray-500 text-xs font-medium">Discount</p>
               <div className="flex gap-2">
+
+                {/* % / $ type toggle */}
                 <div className="flex bg-gray-800 border border-gray-700 rounded-xl p-0.5 shrink-0">
                   <button
-                    onClick={() => { setDiscountType('percent'); setDiscountValue('') }}
+                    onClick={() => { setDiscountType('percent'); setDiscountValue('0') }}
                     className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                       discountType === 'percent'
                         ? 'bg-purple-600 text-white'
@@ -588,7 +605,7 @@ export default function POSPage() {
                     %
                   </button>
                   <button
-                    onClick={() => { setDiscountType('fixed'); setDiscountValue('') }}
+                    onClick={() => { setDiscountType('fixed'); setDiscountValue('0') }}
                     className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                       discountType === 'fixed'
                         ? 'bg-purple-600 text-white'
@@ -598,15 +615,20 @@ export default function POSPage() {
                     $
                   </button>
                 </div>
-                <input
-                  type="number"
-                  min="0"
-                  max={discountType === 'percent' ? 100 : subtotal}
-                  placeholder={discountType === 'percent' ? 'e.g. 10' : 'e.g. 5.00'}
-                  value={discountValue}
-                  onChange={e => setDiscountValue(e.target.value)}
-                  className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-3 py-1.5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm"
-                />
+
+                {/* ── Tap to open numpad — same style as cash received ──── */}
+                <button
+                  onClick={() => openNumPad('discount')}
+                  className="flex-1 bg-gray-800 border border-gray-700 hover:border-purple-500 rounded-xl px-3 py-1.5 text-left transition-colors"
+                >
+                  <p className="text-gray-500 text-xs">Tap to enter</p>
+                  <p className="text-white text-sm font-bold font-mono">
+                    {discountType === 'percent'
+                      ? `${discountValue === '0' ? '0' : discountValue}%`
+                      : `$${discountValue === '0' ? '0' : discountValue}`
+                    }
+                  </p>
+                </button>
               </div>
 
               {discountAmount > 0 && (
@@ -660,9 +682,9 @@ export default function POSPage() {
         </div>
       </div>
 
-      {/* ══════════════════════════════════════════════════════
+      {/* ════════════════════════════════════════════════
           PAYMENT MODAL
-      ══════════════════════════════════════════════════════ */}
+      ════════════════════════════════════════════════ */}
       {payModal && (
         <div className="fixed inset-0 bg-black/80 z-40 flex items-center justify-center p-4">
           <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-sm">
@@ -687,9 +709,7 @@ export default function POSPage() {
                 </div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-xs text-green-400">
-                    <span>
-                      Discount ({discountType === 'percent' ? `${discountRaw}%` : 'fixed'})
-                    </span>
+                    <span>Discount ({discountType === 'percent' ? `${discountRaw}%` : 'fixed'})</span>
                     <span>- {fmt(discountAmount)}</span>
                   </div>
                 )}
@@ -736,12 +756,12 @@ export default function POSPage() {
                 </div>
               </div>
 
-              {/* Cash input */}
+              {/* Cash input — tap to open numpad */}
               {payMethod === 'cash' && (
                 <div>
                   <p className="text-gray-400 text-xs font-medium mb-2">Cash Received</p>
                   <button
-                    onClick={() => setShowNumPad(true)}
+                    onClick={() => openNumPad('cash')}
                     className="w-full bg-gray-800 border border-gray-700 hover:border-purple-500 rounded-xl px-4 py-3 text-left transition-colors"
                   >
                     <p className="text-gray-500 text-xs">Tap to enter amount</p>
@@ -802,14 +822,15 @@ export default function POSPage() {
         </div>
       )}
 
-      {/* Numeric keypad */}
+      {/* ── Shared NumPad — opens for both cash & discount ──────────────────── */}
       {showNumPad && (
         <NumPad
-          value={cashInput}
-          onChange={setCashInput}
+          value={currentNumPadValue}
+          onChange={handleNumPadChange}
           onClose={() => setShowNumPad(false)}
           onConfirm={() => setShowNumPad(false)}
-          label="Enter cash received"
+          label={currentNumPadLabel}
+          prefix={currentNumPadPrefix}
         />
       )}
 
