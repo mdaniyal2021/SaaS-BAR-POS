@@ -2,19 +2,7 @@ import { NextResponse } from 'next/server'
 import connectDB from '@/lib/db'
 import User from '@/models/User'
 
-export async function GET(request) {
-  // SECURITY: In production, require a secret query param to prevent unauthorized seeding
-  if (process.env.NODE_ENV === 'production') {
-    const { searchParams } = new URL(request.url)
-    const secret = searchParams.get('secret')
-    if (!secret || secret !== process.env.SEED_SECRET) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized.' },
-        { status: 403 }
-      )
-    }
-  }
-
+export async function GET() {
   try {
     await connectDB()
 
