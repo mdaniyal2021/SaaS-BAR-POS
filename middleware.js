@@ -4,7 +4,7 @@ export function middleware(request) {
   const { pathname } = request.nextUrl
 
   // Public routes — freely accessible
-  const publicRoutes = ['/login', '/api/auth/login', '/api/auth/logout']
+  const publicRoutes = ['/login', '/api/auth/login', '/api/auth/logout', '/api/auth/seed']
   if (publicRoutes.some(route => pathname.startsWith(route))) {
     return NextResponse.next()
   }

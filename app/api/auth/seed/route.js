@@ -2,14 +2,17 @@ import { NextResponse } from 'next/server'
 import connectDB from '@/lib/db'
 import User from '@/models/User'
 
-export async function GET() {
-  // SECURITY: Seed route is disabled in production
-  // Only works in development mode
+export async function GET(request) {
+  // SECURITY: In production, require a secret query param to prevent unauthorized seeding
   if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json(
-      { success: false, message: 'Not available in production.' },
-      { status: 403 }
-    )
+    const { searchParams } = new URL(request.url)
+    const secret = searchParams.get('secret')
+    if (!secret || secret !== process.env.SEED_SECRET) {
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized.' },
+        { status: 403 }
+      )
+    }
   }
 
   try {
