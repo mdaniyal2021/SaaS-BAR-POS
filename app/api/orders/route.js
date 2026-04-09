@@ -80,21 +80,26 @@ export async function POST(request) {
     // ── Build items & calculate totals ─────────────────────────────────────────
     let subtotal = 0
     const orderItems = items.map(item => {
-      const product = productMap[item.productId]
+      const product      = productMap[item.productId]
       const itemSubtotal = product.price * item.quantity
+      const itemTaxRate  = product.taxRate || 0
+      const itemTax      = parseFloat(((itemSubtotal * itemTaxRate) / 100).toFixed(2))
       subtotal += itemSubtotal
       return {
-        product:  product._id,
-        name:     product.name,
-        price:    product.price,
-        quantity: item.quantity,
-        subtotal: itemSubtotal,
+        product:   product._id,
+        name:      product.name,
+        price:     product.price,
+        quantity:  item.quantity,
+        subtotal:  itemSubtotal,
+        taxRate:   itemTaxRate,
+        taxAmount: itemTax,
       }
     })
 
     const safeDiscount  = Math.min(discountAmt, subtotal)
     const afterDiscount = subtotal - safeDiscount
-    const taxAmount     = parseFloat(((afterDiscount * bar.taxRate) / 100).toFixed(2))
+    // Tax is sum of per-product taxes (calculated on original item subtotals, before discount)
+    const taxAmount     = parseFloat(orderItems.reduce((sum, i) => sum + i.taxAmount, 0).toFixed(2))
     const total         = parseFloat((afterDiscount + taxAmount).toFixed(2))
 
     // ── Generate orderNumber atomically (prevents race condition) ─────────────
@@ -147,8 +152,7 @@ export async function POST(request) {
         discountValue:  discountRawVal,
         afterDiscount,
         tax:            order.tax,
-        taxRate:        bar.taxRate,
-        taxType:        bar.taxType || 'VAT',
+        taxType:        bar.taxType || 'Tax',
         total:          order.total,
         paymentMethod:  order.paymentMethod,
         cashier:        order.cashier?.name,

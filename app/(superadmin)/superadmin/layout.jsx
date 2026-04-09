@@ -52,11 +52,9 @@ export default function SuperAdminLayout({ children }) {
 
         {/* Logo */}
         <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-800">
-          <div className="w-9 h-9 bg-purple-600 rounded-xl flex items-center justify-center shrink-0">
-            <img src="/icons/icon-192x192.png" alt="BarPOS" className="w-6 h-6 object-contain" />
-          </div>
+          <img src="/icons/logo.png" alt="BrewPOS" className="h-22 w-auto object-contain shrink-0" />
           <div>
-            <p className="text-white font-semibold text-sm">BarPOS</p>
+            <p className="text-white font-semibold text-sm">BrewPOS</p>
             <p className="text-purple-400 text-xs">Super Admin</p>
           </div>
           <button
@@ -117,7 +115,7 @@ export default function SuperAdminLayout({ children }) {
             <h1 className="text-white font-semibold text-sm">
               {navItems.find(n => n.href === pathname)?.label || 'Super Admin'}
             </h1>
-            <p className="text-gray-500 text-xs">BarPOS Control Panel</p>
+            <p className="text-gray-500 text-xs">BrewPOS Control Panel</p>
           </div>
         </header>
 

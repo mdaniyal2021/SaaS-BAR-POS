@@ -23,6 +23,14 @@ const OrderItemSchema = new mongoose.Schema({
     type: Number,
     required: true, // price * quantity
   },
+  taxRate: {
+    type: Number,
+    default: 0, // Snapshot of product.taxRate at time of sale
+  },
+  taxAmount: {
+    type: Number,
+    default: 0, // Calculated tax for this line item
+  },
 }, { _id: false })
 
 const OrderSchema = new mongoose.Schema({
@@ -43,7 +51,7 @@ const OrderSchema = new mongoose.Schema({
   },
   tax: {
     type: Number,
-    default: 0, // Tax amount captured at time of sale from bar.taxRate
+    default: 0, // Total tax amount for the order (sum of per-item taxes)
   },
   total: {
     type: Number,

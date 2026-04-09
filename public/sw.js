@@ -1,4 +1,4 @@
-const CACHE_NAME = 'barpos-v1'
+const CACHE_NAME = 'brewpos-v1'
 
 const STATIC_ASSETS = [
   '/',

@@ -12,7 +12,7 @@ import {
 const fmt = (n) => `$${Number(n ?? 0).toFixed(2)}`
 
 // ─── IndexedDB helpers for offline orders ─────────────────────────────────────
-const DB_NAME    = 'barpos-offline'
+const DB_NAME    = 'brewpos-offline'
 const DB_VERSION = 1
 const STORE_NAME = 'pending-orders'
 
@@ -130,7 +130,7 @@ function ReceiptModal({ receipt, onClose, onNewOrder }) {
 
           {/* Header */}
           <div className="text-center space-y-0.5">
-            <img src="/icons/icon-192x192.png" alt="logo" className="w-10 h-10 mx-auto mb-2 rounded-lg" />
+            <img src="/icons/logo.png" alt="logo" className="h-20 w-auto mx-auto mb-2 object-contain" />
             <p className="text-white font-bold text-base">{receipt.barName}</p>
             {receipt.barAddress && <p className="text-gray-400">{receipt.barAddress}</p>}
             {receipt.barPhone   && <p className="text-gray-400">{receipt.barPhone}</p>}
@@ -189,10 +189,12 @@ function ReceiptModal({ receipt, onClose, onNewOrder }) {
                 <span>- {fmt(receipt.discountAmount)}</span>
               </div>
             )}
-            <div className="flex justify-between text-gray-400">
-              <span>{receipt.taxType || 'VAT'} ({receipt.taxRate}%)</span>
-              <span>{fmt(receipt.tax)}</span>
-            </div>
+            {receipt.tax > 0 && (
+              <div className="flex justify-between text-gray-400">
+                <span>Tax</span>
+                <span>{fmt(receipt.tax)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-white font-bold text-sm border-t border-gray-600 pt-1 mt-1">
               <span>Grand Total</span><span>{fmt(receipt.total)}</span>
             </div>
@@ -285,7 +287,7 @@ export default function POSPage() {
   const [syncing,       setSyncing]       = useState(false)
   const syncInProgress  = useRef(false)
 
-  const TAX_RATE = 10
+  // Tax is calculated per-product using each product's own taxRate
 
   // ── Online/Offline detection ───────────────────────────────────────────────
   useEffect(() => {
@@ -379,7 +381,7 @@ export default function POSPage() {
   const discountRaw    = parseFloat(discountValue) || 0
   const discountAmount = discountType === 'percent' ? (subtotal * Math.min(discountRaw, 100)) / 100 : Math.min(discountRaw, subtotal)
   const afterDiscount  = subtotal - discountAmount
-  const taxAmount      = (afterDiscount * TAX_RATE) / 100
+  const taxAmount      = cart.reduce((sum, i) => sum + (i.product.price * i.quantity * (i.product.taxRate || 0)) / 100, 0)
   const totalDisplay   = afterDiscount + taxAmount
   const cashPaid       = parseFloat(cashInput) || 0
   const changeAmt      = Math.max(0, cashPaid - totalDisplay)
@@ -421,7 +423,7 @@ export default function POSPage() {
         }))
         setReceipt({
           orderNumber:    `OFFLINE-${localId}`,
-          barName:        'BarPOS',
+          barName:        'BrewPOS',
           barAddress:     '',
           barPhone:       '',
           items:          orderItems,
@@ -431,8 +433,6 @@ export default function POSPage() {
           discountValue:  discountRaw,
           afterDiscount,
           tax:            parseFloat(taxAmount.toFixed(2)),
-          taxRate:        TAX_RATE,
-          taxType:        'VAT',
           total:          parseFloat(totalDisplay.toFixed(2)),
           paymentMethod:  payMethod,
           cashReceived:   payMethod === 'cash' ? cashPaid : 0,
@@ -485,10 +485,8 @@ export default function POSPage() {
         {/* Top bar */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-purple-600 rounded-lg flex items-center justify-center shrink-0">
-              <img src="/icons/icon-192x192.png" alt="BarPOS" className="w-4 h-4 object-contain" />
-            </div>
-            <span className="text-white font-bold text-lg">POS</span>
+            <img src="/icons/logo.png" alt="BrewPOS" className="h-25 w-auto object-contain shrink-0" />
+            {/* <span className="text-white font-bold text-lg">POS</span> */}
           </div>
 
           <div className="relative flex-1 max-w-sm">
@@ -658,7 +656,7 @@ export default function POSPage() {
           {cart.length > 0 && (
             <div className="border-t border-gray-800 pt-2 space-y-1.5">
               {discountAmount > 0 && <div className="flex justify-between text-xs text-gray-500"><span>After discount</span><span>{fmt(afterDiscount)}</span></div>}
-              <div className="flex justify-between text-xs text-gray-500"><span>VAT ({TAX_RATE}%)</span><span>{fmt(taxAmount)}</span></div>
+              <div className="flex justify-between text-xs text-gray-500"><span>Tax</span><span>{fmt(taxAmount)}</span></div>
               <div className="flex justify-between items-center pt-0.5">
                 <span className="text-white font-bold text-sm">Total</span>
                 <span className="text-white font-bold text-xl">{fmt(totalDisplay)}</span>
@@ -704,7 +702,7 @@ export default function POSPage() {
                   <div className="flex justify-between text-xs text-green-400"><span>Discount</span><span>- {fmt(discountAmount)}</span></div>
                   <div className="flex justify-between text-xs text-gray-500"><span>After discount</span><span>{fmt(afterDiscount)}</span></div>
                 </>}
-                <div className="flex justify-between text-xs text-gray-500"><span>VAT ({TAX_RATE}%)</span><span>{fmt(taxAmount)}</span></div>
+                <div className="flex justify-between text-xs text-gray-500"><span>Tax</span><span>{fmt(taxAmount)}</span></div>
                 <div className="border-t border-gray-700 pt-2 text-center">
                   <p className="text-gray-400 text-xs mb-1">Total Due</p>
                   <p className="text-white text-3xl font-bold">{fmt(totalDisplay)}</p>

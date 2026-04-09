@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { MdSave, MdRefresh, MdStore, MdAttachMoney, MdLocationOn, MdPhone } from 'react-icons/md'
+import { MdSave, MdRefresh, MdStore, MdLocationOn, MdPhone } from 'react-icons/md'
 
 function Toast({ toast, onClose }) {
   useEffect(() => { const t = setTimeout(onClose, 3500); return () => clearTimeout(t) }, [onClose])
@@ -16,7 +16,7 @@ function Toast({ toast, onClose }) {
 }
 
 export default function SettingsPage() {
-  const [form,    setForm]    = useState({ name: '', phone: '', address: '', taxRate: '', taxType: 'VAT', currency: 'USD' })
+  const [form,    setForm]    = useState({ name: '', phone: '', address: '', currency: 'USD' })
   const [loading, setLoading] = useState(true)
   const [saving,  setSaving]  = useState(false)
   const [toast,   setToast]   = useState(null)
@@ -34,8 +34,6 @@ export default function SettingsPage() {
           name:     b.name     || '',
           phone:    b.phone    || '',
           address:  b.address  || '',
-          taxRate:  String(b.taxRate  ?? 10),
-          taxType:  b.taxType  || 'VAT',
           currency: b.currency || 'USD',
         })
       }
@@ -51,7 +49,7 @@ export default function SettingsPage() {
       const res  = await fetch('/api/admin/settings', {
         method:  'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ ...form, taxRate: parseFloat(form.taxRate) || 0 }),
+        body:    JSON.stringify(form),
       })
       const data = await res.json()
       showToast(data.message, data.success ? 'success' : 'error')
@@ -128,47 +126,6 @@ export default function SettingsPage() {
             className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm resize-none"
           />
           <p className="text-gray-600 text-xs mt-1">Appears on printed receipts</p>
-        </div>
-      </div>
-
-      {/* Tax Settings */}
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <MdAttachMoney className="text-purple-400 text-lg" />
-          <h2 className="text-white font-semibold text-sm">Tax Configuration</h2>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1.5">Tax Type</label>
-            <select value={form.taxType} onChange={e => field('taxType', e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 text-sm">
-              <option value="VAT">VAT — UK / EU</option>
-              <option value="Sales Tax">Sales Tax — USA</option>
-              <option value="GST">GST — Canada / Australia</option>
-              <option value="HST">HST — Canada</option>
-              <option value="PST">PST — Canada</option>
-              <option value="None">None — No Tax</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1.5">Tax Rate (%)</label>
-            <input type="number" min="0" max="100" step="0.1"
-              value={form.taxRate} onChange={e => field('taxRate', e.target.value)}
-              placeholder="e.g. 20"
-              className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm"
-            />
-          </div>
-        </div>
-
-        {/* Tax reference */}
-        <div className="bg-gray-800 rounded-xl p-4 text-xs text-gray-400 space-y-1">
-          <p className="font-medium text-gray-300 mb-2">Common tax rates by country:</p>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-            {[['UK','VAT 20%'],['Germany','VAT 19%'],['France','VAT 20%'],['USA (avg)','~8-10%'],['Canada','GST 5%'],['Australia','GST 10%'],['UAE','VAT 5%'],['Pakistan','No VAT']].map(([c, r]) => (
-              <div key={c} className="flex justify-between"><span>{c}</span><span className="text-purple-400">{r}</span></div>
-            ))}
-          </div>
         </div>
       </div>
 

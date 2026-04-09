@@ -1,6 +1,6 @@
 {
-  "name": "BarPOS — Bar Management System",
-  "short_name": "BarPOS",
+  "name": "BrewPOS — Bar Management System",
+  "short_name": "BrewPOS",
   "description": "SaaS Bar Management POS System",
   "start_url": "/login",
   "display": "standalone",

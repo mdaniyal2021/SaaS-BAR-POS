@@ -20,7 +20,7 @@ function Toast({ toast, onClose }) {
   )
 }
 
-const EMPTY_FORM = { name: '', price: '', stock: '', unit: 'pcs', lowStockAlert: '5', categoryId: '' }
+const EMPTY_FORM = { name: '', price: '', stock: '', unit: 'pcs', lowStockAlert: '5', categoryId: '', taxRate: '0' }
 
 export default function ProductsPage() {
   const [products, setProducts]     = useState([])
@@ -64,6 +64,7 @@ export default function ProductsPage() {
       unit: p.unit,
       lowStockAlert: String(p.lowStockAlert),
       categoryId: p.category?._id || '',
+      taxRate: String(p.taxRate ?? 0),
     })
     setSelected(p)
     setModalMode('edit')
@@ -92,6 +93,7 @@ export default function ProductsPage() {
         unit:          form.unit.trim() || 'pcs',
         lowStockAlert: Number(form.lowStockAlert),
         categoryId:    form.categoryId,
+        taxRate:       Number(form.taxRate) || 0,
       }),
     })
     const data = await res.json()
@@ -188,7 +190,7 @@ export default function ProductsPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-800">
-                  {['Product', 'Category', 'Price', 'Stock', 'Unit', 'Available', 'Actions'].map(h => (
+                  {['Product', 'Category', 'Price', 'Tax %', 'Stock', 'Unit', 'Available', 'Actions'].map(h => (
                     <th key={h} className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">{h}</th>
                   ))}
                 </tr>
@@ -196,7 +198,7 @@ export default function ProductsPage() {
               <tbody className="divide-y divide-gray-800">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-12">
+                    <td colSpan={8} className="text-center py-12">
                       <MdStorefront className="text-4xl text-gray-700 mx-auto mb-2" />
                       <p className="text-gray-500 text-sm">
                         {search || filterCat ? 'No products match your filters' : 'No products yet — add your first one'}
@@ -214,6 +216,7 @@ export default function ProductsPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-300 font-medium">${Number(p.price).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-400">{p.taxRate ?? 0}%</td>
                       <td className="px-4 py-3">
                         <span className={`text-sm font-medium ${lowStock ? 'text-red-400' : 'text-gray-300'}`}>
                           {p.stock}
@@ -324,6 +327,17 @@ export default function ProductsPage() {
                     className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm"
                   />
                 </div>
+              </div>
+
+              {/* Tax Rate */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1.5">Tax Rate (%)</label>
+                <input
+                  name="taxRate" type="number" min="0" max="100" step="0.01" value={form.taxRate} onChange={handleField}
+                  placeholder="0"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm"
+                />
+                <p className="text-gray-600 text-xs mt-1">Enter 0 for no tax. e.g. 5 for 5% tax</p>
               </div>
 
               {/* Buttons */}

@@ -24,7 +24,7 @@ const navItems = [
   { label: 'Products',   href: '/products',    icon: MdStorefront  },
   { label: 'Categories', href: '/categories',  icon: MdCategory    },
   { label: 'Inventory',  href: '/inventory',   icon: MdInventory   },
-  { label: 'Staff',      href: '/staff',       icon: MdPeople      },
+  { label: 'Casher',      href: '/staff',       icon: MdPeople      },
   { label: 'Reports',    href: '/reports',     icon: MdBarChart    },
   { label: 'Settings',   href: '/settings',    icon: MdSettings    },
 ]
@@ -61,11 +61,9 @@ export default function AdminLayout({ children }) {
         {/* Logo */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
-              <img src="/icons/icon-192x192.png" alt="BarPOS" className="w-5 h-5 object-contain" />
-            </div>
+            <img src="/icons/logo.png" alt="BrewPOS" className="h-22 w-auto object-contain" />
             <div>
-              <p className="text-white font-semibold text-sm leading-none">BarPOS</p>
+              <p className="text-white font-semibold text-sm leading-none">BrewPOS</p>
               <p className="text-gray-500 text-xs mt-0.5">Admin Panel</p>
             </div>
           </div>
@@ -125,10 +123,8 @@ export default function AdminLayout({ children }) {
             <MdMenu className="text-2xl" />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-purple-600 rounded-md flex items-center justify-center">
-              <img src="/icons/icon-192x192.png" alt="BarPOS" className="w-4 h-4 object-contain" />
-            </div>
-            <span className="text-white font-semibold text-sm">BarPOS</span>
+            <img src="/icons/logo.png" alt="BrewPOS" className="h-7 w-auto object-contain" />
+            <span className="text-white font-semibold text-sm">BrewPOS</span>
           </div>
         </header>
 

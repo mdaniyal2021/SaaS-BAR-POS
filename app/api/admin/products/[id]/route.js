@@ -21,7 +21,7 @@ export async function PATCH(request, { params }) {
     return NextResponse.json({ success: false, message: 'Product not found' }, { status: 404 })
   }
 
-  const { name, price, stock, unit, lowStockAlert, categoryId, isAvailable, barcode } = await request.json()
+  const { name, price, stock, unit, lowStockAlert, categoryId, isAvailable, barcode, taxRate } = await request.json()
 
   if (name !== undefined) {
     if (!name.trim()) return NextResponse.json({ success: false, message: 'Product name is required' }, { status: 400 })
@@ -34,6 +34,7 @@ export async function PATCH(request, { params }) {
   if (stock !== undefined)         product.stock         = Number(stock)
   if (unit !== undefined)          product.unit          = unit.trim() || 'pcs'
   if (lowStockAlert !== undefined) product.lowStockAlert = Number(lowStockAlert)
+  if (taxRate !== undefined)        product.taxRate        = Number(taxRate) || 0
   if (isAvailable !== undefined)   product.isAvailable   = Boolean(isAvailable)
 
   // Barcode update — check uniqueness within bar

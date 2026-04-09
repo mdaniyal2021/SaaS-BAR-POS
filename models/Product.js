@@ -41,6 +41,11 @@ const ProductSchema = new mongoose.Schema({
     ref: 'Bar',
     required: [true, 'Bar reference is required'],
   },
+  taxRate: {
+    type: Number,
+    default: 0,
+    min: [0, 'Tax rate cannot be negative'],
+  },
   isAvailable: {
     type: Boolean,
     default: true,

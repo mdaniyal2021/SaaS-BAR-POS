@@ -45,7 +45,7 @@ export async function POST(request) {
 
   await connectDB()
 
-  const { name, price, stock, unit, lowStockAlert, categoryId, barcode } = await request.json()
+  const { name, price, stock, unit, lowStockAlert, categoryId, barcode, taxRate } = await request.json()
 
   if (!name || !name.trim()) {
     return NextResponse.json({ success: false, message: 'Product name is required' }, { status: 400 })
@@ -77,6 +77,7 @@ export async function POST(request) {
     unit:          unit?.trim() || 'pcs',
     lowStockAlert: Number(lowStockAlert) || 5,
     barcode:       barcode?.trim() || '',
+    taxRate:       Number(taxRate) || 0,
     category:      categoryId,
     bar:           user.barId,
   })
