@@ -71,7 +71,7 @@ export async function POST(request) {
       )
     }
 
-    const user = await User.findOne({ email }).populate('bar')
+    const user = await User.findOne({ email: email.toLowerCase().trim() }).populate('bar')
 
     if (!user) {
       recordFailedAttempt(ip)

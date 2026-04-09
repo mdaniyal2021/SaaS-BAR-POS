@@ -96,14 +96,15 @@ export async function POST(request) {
       },
     })
 
-    // Create bar admin user
-    await User.create({
+    // Create bar admin user — use new+save so the pre-save password-hashing hook fires
+    const adminUser = new User({
       name: adminName,
       email: adminEmail,
       password: adminPassword,
       role: 'admin',
       bar: bar._id,
     })
+    await adminUser.save()
 
     return NextResponse.json({
       success: true,

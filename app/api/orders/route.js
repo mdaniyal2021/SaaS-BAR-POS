@@ -5,6 +5,7 @@ import Order from '@/models/Order'
 import Product from '@/models/Product'
 import Bar from '@/models/Bar'
 import Counter from '@/models/Counter'
+import User from '@/models/User' // required so populate('cashier') can resolve the User model
 
 export async function GET(request) {
   try {

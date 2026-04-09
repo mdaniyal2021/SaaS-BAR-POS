@@ -441,7 +441,7 @@ export default function BarsPage() {
                   <div>
                     <label className="block text-sm text-gray-300 mb-1.5">Admin Password *</label>
                     <input
-                      type="text"
+                      type="password"
                       required
                       value={form.adminPassword}
                       onChange={e => setForm(p => ({ ...p, adminPassword: e.target.value }))}
