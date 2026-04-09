@@ -10,13 +10,15 @@ import {
   MdLogout,
   MdMenu,
   MdClose,
+  MdManageAccounts,
 } from 'react-icons/md'
 import { FiChevronRight } from 'react-icons/fi'
 
 const navItems = [
-  { label: 'Dashboard', href: '/superadmin/dashboard', icon: MdDashboard },
-  { label: 'Bars', href: '/superadmin/bars', icon: MdStorefront },
-  { label: 'Subscriptions', href: '/superadmin/subscriptions', icon: MdSubscriptions },
+  { label: 'Dashboard',    href: '/superadmin/dashboard',    icon: MdDashboard },
+  { label: 'Bars',         href: '/superadmin/bars',         icon: MdStorefront },
+  { label: 'Subscriptions',href: '/superadmin/subscriptions',icon: MdSubscriptions },
+  { label: 'My Account',   href: '/superadmin/account',      icon: MdManageAccounts },
 ]
 
 export default function SuperAdminLayout({ children }) {

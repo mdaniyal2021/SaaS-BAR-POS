@@ -13,11 +13,14 @@ export async function GET(request) {
     await connectDB()
 
     const { searchParams } = new URL(request.url)
-    const range = searchParams.get('range') || '7' // days: 7, 30, 90
+    // Clamp range to allowed values only — prevent DB overload from huge ranges
+    const ALLOWED_RANGES = [7, 30, 90]
+    const rawRange = parseInt(searchParams.get('range') || '7', 10)
+    const range    = ALLOWED_RANGES.includes(rawRange) ? rawRange : 7
 
     const now   = new Date()
     const start = new Date(now)
-    start.setDate(now.getDate() - parseInt(range))
+    start.setDate(now.getDate() - range)
     start.setHours(0, 0, 0, 0)
 
     const barId = user.barId
@@ -27,7 +30,7 @@ export async function GET(request) {
       bar:           barId,
       paymentStatus: 'paid',
       createdAt:     { $gte: start },
-    }).sort({ createdAt: -1 })
+    }).sort({ createdAt: -1 }).limit(5000)
 
     // ── Summary stats ──────────────────────────────────────────────────────────
     const totalRevenue  = orders.reduce((s, o) => s + o.total, 0)
@@ -91,7 +94,7 @@ export async function GET(request) {
 
     return NextResponse.json({
       success: true,
-      range: parseInt(range),
+      range,
       stats: {
         totalRevenue,
         totalOrders,

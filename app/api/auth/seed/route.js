@@ -3,6 +3,25 @@ import connectDB from '@/lib/db'
 import User from '@/models/User'
 
 export async function GET() {
+  // This route is disabled in production — only for initial local dev setup
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { success: false, message: 'Not found' },
+      { status: 404 }
+    )
+  }
+
+  const email    = process.env.SUPERADMIN_EMAIL
+  const password = process.env.SUPERADMIN_PASSWORD
+
+  // Refuse to run if env vars are missing — never use hardcoded defaults
+  if (!email || !password) {
+    return NextResponse.json(
+      { success: false, message: 'SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD must be set in .env.local' },
+      { status: 500 }
+    )
+  }
+
   try {
     await connectDB()
 
@@ -10,22 +29,26 @@ export async function GET() {
     if (existing) {
       return NextResponse.json({
         success: false,
-        message: 'Super admin already exists. Use the login page.'
+        message: 'Super admin already exists. Use the login page.',
       })
     }
 
     await User.create({
-      name: 'Super Admin',
-      email: process.env.SUPERADMIN_EMAIL || 'admin@barpos.com',
-      password: process.env.SUPERADMIN_PASSWORD || 'admin123',
-      role: 'superadmin',
+      name:     'Super Admin',
+      email,
+      password,
+      role:     'superadmin',
     })
 
     return NextResponse.json({
       success: true,
-      message: 'Super admin created successfully. Check your .env.local for credentials.',
+      message: 'Super admin created successfully.',
     })
-  } catch (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+  } catch {
+    // Never expose raw error messages
+    return NextResponse.json(
+      { success: false, message: 'Failed to create super admin.' },
+      { status: 500 }
+    )
   }
 }

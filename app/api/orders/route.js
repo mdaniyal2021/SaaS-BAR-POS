@@ -4,6 +4,7 @@ import { getUserFromRequest } from '@/lib/auth'
 import Order from '@/models/Order'
 import Product from '@/models/Product'
 import Bar from '@/models/Bar'
+import Counter from '@/models/Counter'
 
 export async function GET(request) {
   try {
@@ -95,10 +96,15 @@ export async function POST(request) {
     const taxAmount     = parseFloat(((afterDiscount * bar.taxRate) / 100).toFixed(2))
     const total         = parseFloat((afterDiscount + taxAmount).toFixed(2))
 
-    // ── Generate orderNumber HERE (don't rely on pre-save hook) ───────────────
-    // pre-save hooks can fail if model is cached without the hook registered
-    const orderCount  = await Order.countDocuments({ bar: user.barId })
-    const orderNumber = `ORD-${String(orderCount + 1).padStart(6, '0')}`
+    // ── Generate orderNumber atomically (prevents race condition) ─────────────
+    // $inc on a Counter document is a single atomic MongoDB operation —
+    // two cashiers hitting this at the same time will always get different numbers
+    const counter = await Counter.findOneAndUpdate(
+      { _id: `order_${user.barId}` },
+      { $inc: { seq: 1 } },
+      { new: true, upsert: true }
+    )
+    const orderNumber = `ORD-${String(counter.seq).padStart(6, '0')}`
 
     // ── Create order ───────────────────────────────────────────────────────────
     const order = await Order.create({

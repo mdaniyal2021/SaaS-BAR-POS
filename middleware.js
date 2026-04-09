@@ -4,7 +4,8 @@ export function middleware(request) {
   const { pathname } = request.nextUrl
 
   // Public routes — freely accessible
-  const publicRoutes = ['/login', '/api/auth/login', '/api/auth/logout', '/api/auth/seed']
+  // NOTE: /api/auth/seed is intentionally excluded — it must never be publicly accessible
+  const publicRoutes = ['/login', '/api/auth/login', '/api/auth/logout']
   if (publicRoutes.some(route => pathname.startsWith(route))) {
     return NextResponse.next()
   }
@@ -28,18 +29,20 @@ export function middleware(request) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Decode JWT payload — signature is verified in each API route via getUserFromRequest()
-  // Middleware only handles routing/redirect logic based on role
+  // Decode JWT payload for routing decisions only.
+  // Edge Runtime cannot run the full jsonwebtoken library, so we decode here
+  // and verify signature in every API route via getUserFromRequest().
+  // Even if someone forges the token, they see an empty UI — all API calls
+  // will be rejected because getUserFromRequest() verifies the signature.
   try {
     const parts = token.split('.')
     if (parts.length !== 3) {
       throw new Error('Invalid token format')
     }
 
-    // Add padding if needed for base64 decoding
     const base64Payload = parts[1].replace(/-/g, '+').replace(/_/g, '/')
-    const padded = base64Payload + '='.repeat((4 - base64Payload.length % 4) % 4)
-    const payload = JSON.parse(atob(padded))
+    const padded        = base64Payload + '='.repeat((4 - base64Payload.length % 4) % 4)
+    const payload       = JSON.parse(atob(padded))
 
     // Check token expiry
     if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {

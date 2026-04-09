@@ -85,14 +85,8 @@ const OrderSchema = new mongoose.Schema({
 // Fast queries for bar-scoped order history and reports
 OrderSchema.index({ bar: 1, createdAt: -1 })
 OrderSchema.index({ bar: 1, paymentStatus: 1 })
-
-// Auto-generate order number before saving: ORD-000001
-OrderSchema.pre('save', async function () {
-  if (this.isNew) {
-    const count = await mongoose.models.Order.countDocuments({ bar: this.bar })
-    this.orderNumber = `ORD-${String(count + 1).padStart(6, '0')}`
-  }
-})
+// Prevent duplicate order numbers per bar (safety net for race conditions)
+OrderSchema.index({ bar: 1, orderNumber: 1 }, { unique: true })
 
 const Order = mongoose.models.Order || mongoose.model('Order', OrderSchema)
 export default Order
