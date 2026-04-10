@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import connectDB from '@/lib/db'
 import { getUserFromRequest } from '@/lib/auth'
+import { checkBarSubscription } from '@/lib/subscription'
 import Order from '@/models/Order'
 import Product from '@/models/Product'
 import Bar from '@/models/Bar'
@@ -13,6 +14,10 @@ export async function GET(request) {
     if (!user || !['admin', 'cashier'].includes(user.role)) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
     }
+
+    const sub = await checkBarSubscription(user.barId)
+    if (!sub.ok) return NextResponse.json({ success: false, message: sub.message }, { status: 403 })
+
     await connectDB()
     const orders = await Order.find({ bar: user.barId, paymentStatus: 'paid' })
       .sort({ createdAt: -1 })
@@ -31,6 +36,9 @@ export async function POST(request) {
     if (!user || !['admin', 'cashier'].includes(user.role)) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
     }
+
+    const sub = await checkBarSubscription(user.barId)
+    if (!sub.ok) return NextResponse.json({ success: false, message: sub.message }, { status: 403 })
 
     await connectDB()
 

@@ -16,6 +16,7 @@ import {
   MdLocalBar,
   MdClose,
   MdStorefront,
+  MdSchedule,
 } from 'react-icons/md'
 
 const navItems = [
@@ -24,8 +25,8 @@ const navItems = [
   { label: 'Products',   href: '/products',    icon: MdStorefront  },
   { label: 'Categories', href: '/categories',  icon: MdCategory    },
   { label: 'Inventory',  href: '/inventory',   icon: MdInventory   },
-  { label: 'Casher',      href: '/staff',       icon: MdPeople      },
   { label: 'Reports',    href: '/reports',     icon: MdBarChart    },
+  { label: 'Shifts',     href: '/shifts',      icon: MdSchedule    },
   { label: 'Settings',   href: '/settings',    icon: MdSettings    },
 ]
 
@@ -61,11 +62,7 @@ export default function AdminLayout({ children }) {
         {/* Logo */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-800">
           <div className="flex items-center gap-3">
-            <img src="/icons/logo.png" alt="BrewPOS" className="h-22 w-auto object-contain" />
-            <div>
-              <p className="text-white font-semibold text-sm leading-none">BrewPOS</p>
-              <p className="text-gray-500 text-xs mt-0.5">Admin Panel</p>
-            </div>
+            <img src="/icons/logo.png" alt="BrewPOS" className="h-25 w-auto object-contain" />
           </div>
           <button
             onClick={() => setSidebarOpen(false)}

@@ -44,6 +44,9 @@ const UserSchema = new mongoose.Schema({
 // Hash password before saving
 UserSchema.pre('save', async function () {
   if (!this.isModified('password')) return
+  if (this.password.length < 8) {
+    throw new Error('Password must be at least 8 characters long')
+  }
   const salt = await bcrypt.genSalt(10)
   this.password = await bcrypt.hash(this.password, salt)
 })

@@ -42,8 +42,8 @@ export async function POST(request) {
     if (!email || !email.trim()) {
       return NextResponse.json({ success: false, message: 'Email is required' }, { status: 400 })
     }
-    if (!password || password.length < 6) {
-      return NextResponse.json({ success: false, message: 'Password must be at least 6 characters' }, { status: 400 })
+    if (!password || password.length < 8) {
+      return NextResponse.json({ success: false, message: 'Password must be at least 8 characters' }, { status: 400 })
     }
 
     // Enforce 1 cashier limit for admin

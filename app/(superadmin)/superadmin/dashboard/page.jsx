@@ -122,10 +122,10 @@ export default function SuperAdminDashboard() {
         </div>
       )}
 
-      {/* Recent Bars */}
+      {/* Recent POS */}
       <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
-          <h3 className="text-white font-semibold text-sm">Recent Bars</h3>
+          <h3 className="text-white font-semibold text-sm">Recent POS</h3>
           <button
             onClick={() => window.location.href = '/superadmin/bars'}
             className="text-purple-400 hover:text-purple-300 text-xs transition-colors"

@@ -285,14 +285,22 @@ export default function POSPage() {
   const [isOnline,      setIsOnline]      = useState(true)
   const [pendingCount,  setPendingCount]  = useState(0)
   const [syncing,       setSyncing]       = useState(false)
-  const syncInProgress  = useRef(false)
+  const syncInProgress     = useRef(false)
+  const offlineSessionCode = useRef(null)  // random 4-digit prefix for this offline session
+  const offlineLocalSeq    = useRef(0)     // local counter within this offline session
 
   // Tax is calculated per-product using each product's own taxRate
 
   // ── Online/Offline detection ───────────────────────────────────────────────
   useEffect(() => {
     setIsOnline(navigator.onLine)
-    const goOnline  = () => { setIsOnline(true);  syncPendingOrders() }
+    const goOnline  = () => {
+      setIsOnline(true)
+      // Reset offline session so next outage gets a fresh random prefix
+      offlineSessionCode.current = null
+      offlineLocalSeq.current    = 0
+      syncPendingOrders()
+    }
     const goOffline = () => setIsOnline(false)
     window.addEventListener('online',  goOnline)
     window.addEventListener('offline', goOffline)
@@ -413,7 +421,15 @@ export default function POSPage() {
     // ── OFFLINE: save to IndexedDB ─────────────────────────────────────────
     if (!isOnline) {
       try {
-        const localId = await saveOfflineOrder({ payload })
+        // Generate session code once per offline session (lazy — on first bill)
+        if (!offlineSessionCode.current) {
+          offlineSessionCode.current = String(Math.floor(1000 + Math.random() * 9000))
+          offlineLocalSeq.current    = 0
+        }
+        offlineLocalSeq.current += 1
+        const offlineOrderNumber = `${offlineSessionCode.current}-${String(offlineLocalSeq.current).padStart(4, '0')}`
+
+        await saveOfflineOrder({ payload })
         await refreshPendingCount()
 
         // Build local receipt for display
@@ -422,7 +438,7 @@ export default function POSPage() {
           price: i.product.price, subtotal: i.product.price * i.quantity,
         }))
         setReceipt({
-          orderNumber:    `OFFLINE-${localId}`,
+          orderNumber:    offlineOrderNumber,
           barName:        'BrewPOS',
           barAddress:     '',
           barPhone:       '',
@@ -552,19 +568,50 @@ export default function POSPage() {
                 const lowStock   = product.stock > 0 && product.stock <= product.lowStockAlert
                 return (
                   <button key={product._id} onClick={() => addToCart(product)} disabled={outOfStock}
-                    className={`relative bg-gray-900 border rounded-2xl p-4 text-left transition-all active:scale-95 ${
+                    className={`relative bg-gray-900 border rounded-2xl overflow-hidden text-left transition-all active:scale-95 ${
                       outOfStock ? 'border-gray-800 opacity-40 cursor-not-allowed'
-                      : inCart   ? 'border-purple-500/60 bg-purple-500/5 shadow-sm shadow-purple-900/20'
-                      :            'border-gray-800 hover:border-gray-700 hover:bg-gray-800/50 cursor-pointer'
+                      : inCart   ? 'border-purple-500/60 shadow-sm shadow-purple-900/20'
+                      :            'border-gray-800 hover:border-gray-700 cursor-pointer'
                     }`}>
-                    {inCart && <span className="absolute top-2 right-2 w-5 h-5 bg-purple-600 rounded-full text-white text-xs font-bold flex items-center justify-center">{inCart.quantity}</span>}
-                    {outOfStock && <span className="absolute top-2 left-2 bg-red-500/20 text-red-400 text-xs px-1.5 py-0.5 rounded-md border border-red-500/20">Out</span>}
-                    <div className="w-10 h-10 bg-gray-800 border border-gray-700 rounded-xl flex items-center justify-center mb-3 text-lg">🍺</div>
-                    <p className="text-white text-sm font-semibold leading-tight line-clamp-2 mb-1">{product.name}</p>
-                    <p className="text-purple-400 font-bold text-sm">{fmt(product.price)}</p>
-                    <p className={`text-xs mt-1 ${outOfStock ? 'text-red-400' : lowStock ? 'text-amber-400' : 'text-gray-600'}`}>
-                      {outOfStock ? 'Out of stock' : lowStock ? `Low: ${product.stock} left` : `${product.stock} ${product.unit}`}
-                    </p>
+
+                    {/* Image area */}
+                    <div className="relative w-full h-28 bg-gray-800">
+                      {product.image ? (
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                          onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex' }}
+                        />
+                      ) : null}
+                      {/* Placeholder — shown when no image or image fails to load */}
+                      <div
+                        className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900"
+                        style={{ display: product.image ? 'none' : 'flex' }}
+                      >
+                        <span className="text-3xl font-bold text-gray-600 select-none">
+                          {product.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      {/* Badges */}
+                      {inCart && (
+                        <span className="absolute top-2 right-2 w-5 h-5 bg-purple-600 rounded-full text-white text-xs font-bold flex items-center justify-center shadow">
+                          {inCart.quantity}
+                        </span>
+                      )}
+                      {outOfStock && (
+                        <span className="absolute top-2 left-2 bg-red-500/80 text-white text-xs px-1.5 py-0.5 rounded-md">Out</span>
+                      )}
+                    </div>
+
+                    {/* Text content */}
+                    <div className="p-3">
+                      <p className="text-white text-sm font-semibold leading-tight line-clamp-2 mb-1">{product.name}</p>
+                      <p className="text-purple-400 font-bold text-sm">{fmt(product.price)}</p>
+                      <p className={`text-xs mt-0.5 ${outOfStock ? 'text-red-400' : lowStock ? 'text-amber-400' : 'text-gray-600'}`}>
+                        {outOfStock ? 'Out of stock' : lowStock ? `Low: ${product.stock} left` : `${product.stock} ${product.unit}`}
+                      </p>
+                    </div>
                   </button>
                 )
               })}

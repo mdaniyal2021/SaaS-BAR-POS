@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { MdAdd, MdEdit, MdDelete, MdClose, MdSearch, MdStorefront, MdToggleOn, MdToggleOff } from 'react-icons/md'
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { MdAdd, MdEdit, MdDelete, MdClose, MdSearch, MdStorefront, MdToggleOn, MdToggleOff, MdImage } from 'react-icons/md'
 
 function Toast({ toast, onClose }) {
   useEffect(() => {
@@ -20,7 +20,7 @@ function Toast({ toast, onClose }) {
   )
 }
 
-const EMPTY_FORM = { name: '', price: '', stock: '', unit: 'pcs', lowStockAlert: '5', categoryId: '', taxRate: '0' }
+const EMPTY_FORM = { name: '', price: '', stock: '', unit: 'pcs', lowStockAlert: '5', categoryId: '', taxRate: '0', image: '' }
 
 export default function ProductsPage() {
   const [products, setProducts]     = useState([])
@@ -33,6 +33,8 @@ export default function ProductsPage() {
   const [form, setForm]             = useState(EMPTY_FORM)
   const [saving, setSaving]         = useState(false)
   const [toast, setToast]           = useState(null)
+  const [imageUploading, setImageUploading] = useState(false)
+  const fileInputRef = useRef(null)
 
   const showToast = (message, type = 'success') => setToast({ message, type })
 
@@ -65,13 +67,37 @@ export default function ProductsPage() {
       lowStockAlert: String(p.lowStockAlert),
       categoryId: p.category?._id || '',
       taxRate: String(p.taxRate ?? 0),
+      image: p.image || '',
     })
     setSelected(p)
     setModalMode('edit')
   }
 
   const openDelete = (p) => { setSelected(p); setModalMode('delete') }
-  const closeModal = () => { setModalMode(null); setSelected(null) }
+  const closeModal = () => { setModalMode(null); setSelected(null); setImageUploading(false) }
+
+  const handleImagePick = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    // Reset so same file can be re-picked if needed
+    e.target.value = ''
+    setImageUploading(true)
+    try {
+      const fd   = new FormData()
+      fd.append('image', file)
+      const res  = await fetch('/api/admin/upload', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (data.success) {
+        setForm(prev => ({ ...prev, image: data.url }))
+      } else {
+        showToast(data.message || 'Upload failed', 'error')
+      }
+    } catch {
+      showToast('Upload failed. Check your connection.', 'error')
+    } finally {
+      setImageUploading(false)
+    }
+  }
 
   const handleField = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
 
@@ -94,6 +120,7 @@ export default function ProductsPage() {
         lowStockAlert: Number(form.lowStockAlert),
         categoryId:    form.categoryId,
         taxRate:       Number(form.taxRate) || 0,
+        image:         form.image || '',
       }),
     })
     const data = await res.json()
@@ -147,7 +174,7 @@ export default function ProductsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Products</h1>
-          <p className="text-gray-400 text-sm mt-1">Manage your bar's product catalog</p>
+          <p className="text-gray-400 text-sm mt-1">Manage your POS product catalog</p>
         </div>
         <button
           onClick={openAdd}
@@ -190,7 +217,7 @@ export default function ProductsPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-800">
-                  {['Product', 'Category', 'Price', 'Tax %', 'Stock', 'Unit', 'Available', 'Actions'].map(h => (
+                  {['', 'Product', 'Category', 'Price', 'Tax %', 'Stock', 'Unit', 'Available', 'Actions'].map(h => (
                     <th key={h} className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">{h}</th>
                   ))}
                 </tr>
@@ -198,7 +225,7 @@ export default function ProductsPage() {
               <tbody className="divide-y divide-gray-800">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-12">
+                    <td colSpan={9} className="text-center py-12">
                       <MdStorefront className="text-4xl text-gray-700 mx-auto mb-2" />
                       <p className="text-gray-500 text-sm">
                         {search || filterCat ? 'No products match your filters' : 'No products yet — add your first one'}
@@ -209,6 +236,15 @@ export default function ProductsPage() {
                   const lowStock = p.stock <= p.lowStockAlert
                   return (
                     <tr key={p._id} className="hover:bg-gray-800/40 transition-colors">
+                      <td className="px-4 py-3">
+                        {p.image ? (
+                          <img src={p.image} alt={p.name} className="w-10 h-10 rounded-xl object-cover bg-gray-800" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-800 to-gray-700 flex items-center justify-center">
+                            <span className="text-sm font-bold text-gray-500">{p.name.charAt(0).toUpperCase()}</span>
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-sm font-medium text-white">{p.name}</td>
                       <td className="px-4 py-3">
                         <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
@@ -338,6 +374,52 @@ export default function ProductsPage() {
                   className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm"
                 />
                 <p className="text-gray-600 text-xs mt-1">Enter 0 for no tax. e.g. 5 for 5% tax</p>
+              </div>
+
+              {/* Product Image */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1.5">Product Image</label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  onChange={handleImagePick}
+                  className="hidden"
+                />
+                {form.image ? (
+                  <div className="flex items-center gap-3">
+                    <img src={form.image} alt="preview" className="w-16 h-16 rounded-xl object-cover bg-gray-800 border border-gray-700" />
+                    <div className="flex flex-col gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="text-xs text-purple-400 hover:text-purple-300 bg-purple-500/10 border border-purple-500/20 px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        Change Image
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setForm(prev => ({ ...prev, image: '' }))}
+                        className="text-xs text-red-400 hover:text-red-300 bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={imageUploading}
+                    className="w-full flex items-center justify-center gap-2 bg-gray-800 border border-dashed border-gray-600 hover:border-purple-500 rounded-xl py-4 text-gray-400 hover:text-purple-400 transition-colors disabled:opacity-50"
+                  >
+                    {imageUploading ? (
+                      <><div className="w-4 h-4 border-2 border-purple-500/30 border-t-purple-400 rounded-full animate-spin" /> Uploading...</>
+                    ) : (
+                      <><MdImage className="text-xl" /> <span className="text-sm">Upload Image (max 2 MB)</span></>
+                    )}
+                  </button>
+                )}
               </div>
 
               {/* Buttons */}

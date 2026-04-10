@@ -152,7 +152,7 @@ export default function SubscriptionsPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-800">
-                  {['Bar', 'Plan', 'Status', 'Start Date', 'Expiry Date', 'Days Left', 'Action'].map(h => (
+                  {['POS', 'Plan', 'Status', 'Start Date', 'Expiry Date', 'Days Left', 'Action'].map(h => (
                     <th key={h} className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3">{h}</th>
                   ))}
                 </tr>

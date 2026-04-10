@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import connectDB from '@/lib/db'
 import { getUserFromRequest } from '@/lib/auth'
+import { checkBarSubscription } from '@/lib/subscription'
 import Bar from '@/models/Bar'
 
 // GET — returns bar info needed by POS (name, taxRate, taxType, currency)
@@ -10,6 +11,9 @@ export async function GET(request) {
     if (!user || !['admin', 'cashier'].includes(user.role)) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
     }
+
+    const sub = await checkBarSubscription(user.barId)
+    if (!sub.ok) return NextResponse.json({ success: false, message: sub.message }, { status: 403 })
 
     await connectDB()
 

@@ -21,7 +21,7 @@ export async function PATCH(request, { params }) {
     return NextResponse.json({ success: false, message: 'Product not found' }, { status: 404 })
   }
 
-  const { name, price, stock, unit, lowStockAlert, categoryId, isAvailable, barcode, taxRate } = await request.json()
+  const { name, price, stock, unit, lowStockAlert, categoryId, isAvailable, barcode, taxRate, image } = await request.json()
 
   if (name !== undefined) {
     if (!name.trim()) return NextResponse.json({ success: false, message: 'Product name is required' }, { status: 400 })
@@ -36,7 +36,6 @@ export async function PATCH(request, { params }) {
   if (lowStockAlert !== undefined) product.lowStockAlert = Number(lowStockAlert)
   if (taxRate !== undefined)        product.taxRate        = Number(taxRate) || 0
   if (isAvailable !== undefined)   product.isAvailable   = Boolean(isAvailable)
-
   // Barcode update — check uniqueness within bar
   if (barcode !== undefined) {
     const trimmed = barcode.trim()
@@ -54,6 +53,15 @@ export async function PATCH(request, { params }) {
   }
 
   await product.save()
+
+  // Write image directly to MongoDB — bypasses Mongoose strict-mode model cache.
+  // Must come after product.save() so we don't lose it in a subsequent save.
+  if (image !== undefined) {
+    const imageVal = image?.trim() || ''
+    await Product.collection.updateOne({ _id: product._id }, { $set: { image: imageVal } })
+    product._doc.image = imageVal  // patch in-memory doc for the JSON response
+  }
+
   await product.populate('category', 'name')
   return NextResponse.json({ success: true, message: 'Product updated', product })
 }

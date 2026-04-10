@@ -46,6 +46,10 @@ const ProductSchema = new mongoose.Schema({
     default: 0,
     min: [0, 'Tax rate cannot be negative'],
   },
+  image: {
+    type: String,
+    default: '',
+  },
   isAvailable: {
     type: Boolean,
     default: true,
@@ -59,6 +63,12 @@ ProductSchema.index({ bar: 1, category: 1 })
 ProductSchema.index({ bar: 1, isAvailable: 1 })
 // Barcode lookup — sparse so empty strings don't conflict
 ProductSchema.index({ bar: 1, barcode: 1 }, { sparse: true })
+
+// In development, always recompile so schema changes (like new fields) take effect
+// without needing a full server restart after hot reload.
+if (process.env.NODE_ENV !== 'production') {
+  delete mongoose.models['Product']
+}
 
 const Product = mongoose.models.Product || mongoose.model('Product', ProductSchema)
 export default Product

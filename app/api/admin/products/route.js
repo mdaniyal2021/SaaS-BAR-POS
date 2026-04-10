@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import connectDB from '@/lib/db'
 import { getUserFromRequest } from '@/lib/auth'
+import { checkBarSubscription } from '@/lib/subscription'
 import Product from '@/models/Product'
 import Category from '@/models/Category'
 
@@ -10,6 +11,9 @@ export async function GET(request) {
   if (!user || !['admin', 'cashier'].includes(user.role)) {
     return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
   }
+
+  const sub = await checkBarSubscription(user.barId)
+  if (!sub.ok) return NextResponse.json({ success: false, message: sub.message }, { status: 403 })
 
   await connectDB()
 
@@ -21,7 +25,7 @@ export async function GET(request) {
     const product = await Product.findOne({
       bar:     user.barId,
       barcode: barcode.trim(),
-    }).populate('category', 'name')
+    }).populate('category', 'name').lean()
 
     if (!product) {
       return NextResponse.json({ success: false, message: 'Product not found for this barcode' }, { status: 404 })
@@ -30,9 +34,12 @@ export async function GET(request) {
   }
 
   // Normal — return all products
+  // .lean() returns plain JS objects with ALL MongoDB fields (including image),
+  // bypassing Mongoose schema filtering from any cached model.
   const products = await Product.find({ bar: user.barId })
     .populate('category', 'name')
     .sort({ name: 1 })
+    .lean()
   return NextResponse.json({ success: true, products })
 }
 
@@ -43,9 +50,12 @@ export async function POST(request) {
     return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
   }
 
+  const sub = await checkBarSubscription(user.barId)
+  if (!sub.ok) return NextResponse.json({ success: false, message: sub.message }, { status: 403 })
+
   await connectDB()
 
-  const { name, price, stock, unit, lowStockAlert, categoryId, barcode, taxRate } = await request.json()
+  const { name, price, stock, unit, lowStockAlert, categoryId, barcode, taxRate, image } = await request.json()
 
   if (!name || !name.trim()) {
     return NextResponse.json({ success: false, message: 'Product name is required' }, { status: 400 })
@@ -82,6 +92,13 @@ export async function POST(request) {
     bar:           user.barId,
   })
 
+  // Write image directly to MongoDB — bypasses Mongoose strict-mode model cache
+  // which may have been compiled before the image field was added to the schema.
+  const imageVal = image?.trim() || ''
+  await Product.collection.updateOne({ _id: product._id }, { $set: { image: imageVal } })
+
   await product.populate('category', 'name')
-  return NextResponse.json({ success: true, message: 'Product created successfully', product }, { status: 201 })
+  const productObj = product.toObject()
+  productObj.image = imageVal
+  return NextResponse.json({ success: true, message: 'Product created successfully', product: productObj }, { status: 201 })
 }

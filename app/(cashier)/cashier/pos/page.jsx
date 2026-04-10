@@ -6,10 +6,245 @@ import {
   MdAdd, MdRemove, MdDelete, MdClose, MdCheck,
   MdLocalAtm, MdCreditCard, MdPrint, MdShoppingCart,
   MdSearch, MdReceiptLong, MdLocalBar, MdLogout,
+  MdPlayArrow, MdStop, MdAccessTime, MdAccountBalanceWallet,
 } from 'react-icons/md'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n) => `$${Number(n ?? 0).toFixed(2)}`
+const fmtTime = (iso) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+const fmtDate = (iso) => new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+
+// ─── Start Shift Screen ───────────────────────────────────────────────────────
+function StartShiftScreen({ cashierName, onStart, onLogout }) {
+  const [cash,    setCash]    = useState('0')
+  const [loading, setLoading] = useState(false)
+  const [error,   setError]   = useState('')
+  const now = new Date()
+
+  const press = (key) => {
+    if (key === '⌫') { setCash(v => v.slice(0, -1) || '0'); return }
+    if (key === '.') { if (!cash.includes('.')) setCash(v => v + '.'); return }
+    setCash(v => v === '0' ? key : v + key)
+  }
+
+  const handleStart = async () => {
+    const amount = parseFloat(cash) || 0
+    setLoading(true); setError('')
+    const res  = await fetch('/api/shifts/start', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ openingCash: amount }),
+    })
+    const data = await res.json()
+    if (data.success) {
+      onStart(data.shift)
+    } else {
+      setError(data.message)
+      setLoading(false)
+    }
+  }
+
+  const keys = ['1','2','3','4','5','6','7','8','9','.','0','⌫']
+
+  return (
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
+      <div className="w-full max-w-sm space-y-5">
+
+        {/* Logo + greeting */}
+        <div className="text-center space-y-1">
+          <img src="/icons/logo.png" alt="BrewPOS" className="h-16 w-auto mx-auto object-contain" />
+          <p className="text-white font-semibold text-lg">Welcome, {cashierName}</p>
+          <p className="text-gray-500 text-sm">
+            {now.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' })}
+            {' · '}
+            {now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+          </p>
+        </div>
+
+        {/* Card */}
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <MdAccountBalanceWallet className="text-purple-400 text-xl" />
+            <p className="text-white font-semibold">Start Shift</p>
+          </div>
+
+          {/* Cash display */}
+          <div className="bg-gray-800 rounded-xl px-4 py-3 text-right">
+            <p className="text-gray-500 text-xs mb-0.5">Opening Cash in Drawer</p>
+            <p className="text-white text-3xl font-bold font-mono">${cash}</p>
+          </div>
+
+          {/* Numpad */}
+          <div className="grid grid-cols-3 gap-2">
+            {keys.map(k => (
+              <button key={k} onClick={() => press(k)}
+                className={`h-12 rounded-xl text-base font-semibold transition-colors active:scale-95 ${
+                  k === '⌫'
+                    ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/20'
+                    : 'bg-gray-800 text-white hover:bg-gray-700 border border-gray-700'
+                }`}>
+                {k}
+              </button>
+            ))}
+          </div>
+
+          {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+
+          <button onClick={handleStart} disabled={loading}
+            className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 text-white font-bold py-3.5 rounded-xl transition-colors">
+            {loading
+              ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Starting...</>
+              : <><MdPlayArrow className="text-xl" /> Start Shift</>
+            }
+          </button>
+        </div>
+
+        <button onClick={onLogout}
+          className="w-full flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-red-400 transition-colors py-2">
+          <MdLogout /> Logout
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── End Shift Modal ──────────────────────────────────────────────────────────
+function EndShiftModal({ shift, liveCash, onClose, onEnd }) {
+  const [cash,    setCash]    = useState('0')
+  const [notes,   setNotes]   = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error,   setError]   = useState('')
+
+  const press = (key) => {
+    if (key === '⌫') { setCash(v => v.slice(0, -1) || '0'); return }
+    if (key === '.') { if (!cash.includes('.')) setCash(v => v + '.'); return }
+    setCash(v => v === '0' ? key : v + key)
+  }
+
+  const closingAmt   = parseFloat(cash) || 0
+  const expectedCash = liveCash ?? shift.openingCash ?? 0
+  const difference   = parseFloat((closingAmt - expectedCash).toFixed(2))
+  const keys = ['1','2','3','4','5','6','7','8','9','.','0','⌫']
+
+  const handleEnd = async () => {
+    setLoading(true); setError('')
+    const res  = await fetch('/api/shifts/end', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ closingCash: closingAmt, notes }),
+    })
+    const data = await res.json()
+    if (data.success) {
+      onEnd(data.shift)
+    } else {
+      setError(data.message)
+      setLoading(false)
+    }
+  }
+
+  // Duration
+  const ms  = Date.now() - new Date(shift.startTime).getTime()
+  const h   = Math.floor(ms / 3600000)
+  const m   = Math.floor((ms % 3600000) / 60000)
+
+  return (
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-sm max-h-[90vh] flex flex-col">
+
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+          <div className="flex items-center gap-2">
+            <MdStop className="text-red-400 text-xl" />
+            <span className="text-white font-semibold">End Shift</span>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white"><MdClose className="text-xl" /></button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 p-5 space-y-4">
+          {/* Shift info */}
+          <div className="bg-gray-800 rounded-xl p-3 space-y-1.5 text-sm">
+            <div className="flex justify-between text-gray-400">
+              <span>Started</span>
+              <span className="text-white">{fmtDate(shift.startTime)} {fmtTime(shift.startTime)}</span>
+            </div>
+            <div className="flex justify-between text-gray-400">
+              <span>Duration</span>
+              <span className="text-white">{h}h {m}m</span>
+            </div>
+            <div className="flex justify-between text-gray-400">
+              <span>Opening Cash</span>
+              <span className="text-white font-medium">{fmt(shift.openingCash)}</span>
+            </div>
+            <div className="border-t border-gray-700 pt-1.5 flex justify-between text-gray-400">
+              <span>Expected in Drawer</span>
+              <span className="text-green-400 font-bold">{fmt(expectedCash)}</span>
+            </div>
+          </div>
+
+          {/* Live difference preview */}
+          {closingAmt > 0 && (
+            <div className={`rounded-xl px-4 py-2.5 flex justify-between text-sm border ${
+              difference === 0 ? 'bg-gray-700/30 border-gray-700 text-gray-400'
+              : difference > 0 ? 'bg-green-500/10 border-green-500/20'
+              : 'bg-red-500/10 border-red-500/20'
+            }`}>
+              <span className={difference > 0 ? 'text-green-400' : difference < 0 ? 'text-red-400' : 'text-gray-400'}>
+                {difference > 0 ? 'Over' : difference < 0 ? 'Short' : 'Exact'}
+              </span>
+              <span className={`font-bold ${difference > 0 ? 'text-green-400' : difference < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                {difference > 0 ? '+' : ''}{fmt(difference)}
+              </span>
+            </div>
+          )}
+
+          {/* Closing cash */}
+          <div>
+            <p className="text-gray-300 text-sm font-medium mb-2">Cash in Drawer Now</p>
+            <div className="bg-gray-800 rounded-xl px-4 py-3 text-right mb-3">
+              <p className="text-white text-2xl font-bold font-mono">${cash}</p>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {keys.map(k => (
+                <button key={k} onClick={() => press(k)}
+                  className={`h-11 rounded-xl text-sm font-semibold transition-colors active:scale-95 ${
+                    k === '⌫'
+                      ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/20'
+                      : 'bg-gray-800 text-white hover:bg-gray-700 border border-gray-700'
+                  }`}>
+                  {k}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <p className="text-gray-300 text-sm font-medium mb-1.5">Notes (optional)</p>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
+              placeholder="Any remarks about this shift..."
+              className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-purple-500 resize-none"
+            />
+          </div>
+
+          {error && <p className="text-red-400 text-sm">{error}</p>}
+        </div>
+
+        <div className="p-5 border-t border-gray-800 flex gap-3">
+          <button onClick={onClose}
+            className="flex-1 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium py-3 rounded-xl transition-colors">
+            Cancel
+          </button>
+          <button onClick={handleEnd} disabled={loading}
+            className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 disabled:bg-red-800 text-white text-sm font-bold py-3 rounded-xl transition-colors">
+            {loading
+              ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Ending...</>
+              : <><MdStop /> End Shift</>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ─── Numeric Keypad ───────────────────────────────────────────────────────────
 function NumPad({ value, onChange, onClose, onConfirm, label, prefix = '$' }) {
@@ -210,6 +445,13 @@ function ReceiptModal({ receipt, onNewOrder }) {
 export default function CashierPOSPage() {
   const router = useRouter()
 
+  // Shift state
+  const [shift,        setShift]        = useState(null)
+  const [shiftLoaded,  setShiftLoaded]  = useState(false)
+  const [showEndShift, setShowEndShift] = useState(false)
+  const [cashierName,  setCashierName]  = useState('')
+  const [liveCash,     setLiveCash]     = useState(0)
+
   const [categories,     setCategories]     = useState([])
   const [products,       setProducts]       = useState([])
   const [loading,        setLoading]        = useState(true)
@@ -230,6 +472,19 @@ export default function CashierPOSPage() {
 
   // Tax is calculated per-product using each product's own taxRate
 
+  // Check for active shift on mount
+  useEffect(() => {
+    fetch('/api/shifts/active')
+      .then(r => r.json())
+      .then(data => {
+        if (data.shift) setShift(data.shift)
+        if (data.cashierName) setCashierName(data.cashierName)
+        if (data.currentCashBalance != null) setLiveCash(data.currentCashBalance)
+        setShiftLoaded(true)
+      })
+      .catch(() => setShiftLoaded(true))
+  }, [])
+
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
@@ -245,6 +500,29 @@ export default function CashierPOSPage() {
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
     router.push('/login')
+  }
+
+  const handleShiftEnd = (closedShift) => {
+    setShift(null)
+    setShowEndShift(false)
+  }
+
+  // Show spinner while checking shift
+  if (!shiftLoaded) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  // No active shift → show start shift screen
+  if (!shift) {
+    const handleShiftStart = (newShift) => {
+      setShift(newShift)
+      setLiveCash(newShift.openingCash ?? 0)
+    }
+    return <StartShiftScreen cashierName={cashierName} onStart={handleShiftStart} onLogout={handleLogout} />
   }
 
   const addToCart = (product) => {
@@ -304,6 +582,9 @@ export default function CashierPOSPage() {
       })
       const data = await res.json()
       if (data.success) {
+        if (payMethod === 'cash') {
+          setLiveCash(prev => parseFloat((prev + (data.receipt?.total ?? 0)).toFixed(2)))
+        }
         setReceipt({ ...data.receipt, cashReceived: payMethod === 'cash' ? cashPaid : 0 })
         setPayModal(false); clearCart(); setCashInput('0'); loadData()
       } else { setError(data.message) }
@@ -330,8 +611,32 @@ export default function CashierPOSPage() {
               className="w-full bg-gray-900 border border-gray-800 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm"
             />
           </div>
+          {/* Shift info pill */}
+          <div className="flex items-center gap-3 bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 ml-auto shrink-0">
+            <div className="flex items-center gap-1.5 leading-none">
+              <MdAccessTime className="text-amber-400 text-base shrink-0" />
+              <div>
+                <p className="text-xs text-gray-500">Shift started</p>
+                <p className="text-xs text-white font-medium">{fmtTime(shift.startTime)}</p>
+              </div>
+            </div>
+            <div className="w-px h-6 bg-gray-700" />
+            <div className="flex items-center gap-1.5 leading-none">
+              <MdAccountBalanceWallet className="text-green-400 text-base shrink-0" />
+              <div>
+                <p className="text-xs text-gray-500">Cash in drawer</p>
+                <p className="text-xs text-green-400 font-bold">{fmt(liveCash)}</p>
+              </div>
+            </div>
+          </div>
+
+          <button onClick={() => setShowEndShift(true)}
+            className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 px-3 py-2.5 rounded-xl transition-colors shrink-0">
+            <MdStop className="text-base" /> End Shift
+          </button>
+
           <button onClick={handleLogout}
-            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-400 bg-gray-900 border border-gray-800 px-3 py-2.5 rounded-xl transition-colors ml-auto shrink-0">
+            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-400 bg-gray-900 border border-gray-800 px-3 py-2.5 rounded-xl transition-colors shrink-0">
             <MdLogout className="text-base" /> Logout
           </button>
         </div>
@@ -369,25 +674,50 @@ export default function CashierPOSPage() {
                 const lowStock = product.stock > 0 && product.stock <= product.lowStockAlert
                 return (
                   <button key={product._id} onClick={() => addToCart(product)} disabled={outOfStock}
-                    className={`relative bg-gray-900 border rounded-2xl p-4 text-left transition-all active:scale-95 ${
+                    className={`relative bg-gray-900 border rounded-2xl overflow-hidden text-left transition-all active:scale-95 ${
                       outOfStock ? 'border-gray-800 opacity-40 cursor-not-allowed'
-                      : inCart ? 'border-purple-500/60 bg-purple-500/5 shadow-sm shadow-purple-900/20'
-                      : 'border-gray-800 hover:border-gray-700 hover:bg-gray-800/50 cursor-pointer'
+                      : inCart ? 'border-purple-500/60 shadow-sm shadow-purple-900/20'
+                      : 'border-gray-800 hover:border-gray-700 cursor-pointer'
                     }`}>
-                    {inCart && (
-                      <span className="absolute top-2 right-2 w-5 h-5 bg-purple-600 rounded-full text-white text-xs font-bold flex items-center justify-center">
-                        {inCart.quantity}
-                      </span>
-                    )}
-                    {outOfStock && (
-                      <span className="absolute top-2 left-2 bg-red-500/20 text-red-400 text-xs px-1.5 py-0.5 rounded-md border border-red-500/20">Out</span>
-                    )}
-                    <div className="w-10 h-10 bg-gray-800 border border-gray-700 rounded-xl flex items-center justify-center mb-3 text-lg">🍺</div>
+
+                    {/* Image area */}
+                    <div className="relative w-full h-28 bg-gray-800">
+                      {product.image ? (
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                          onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex' }}
+                        />
+                      ) : null}
+                      {/* Placeholder */}
+                      <div
+                        className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900"
+                        style={{ display: product.image ? 'none' : 'flex' }}
+                      >
+                        <span className="text-3xl font-bold text-gray-600 select-none">
+                          {product.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      {/* Badges */}
+                      {inCart && (
+                        <span className="absolute top-2 right-2 w-5 h-5 bg-purple-600 rounded-full text-white text-xs font-bold flex items-center justify-center shadow">
+                          {inCart.quantity}
+                        </span>
+                      )}
+                      {outOfStock && (
+                        <span className="absolute top-2 left-2 bg-red-500/80 text-white text-xs px-1.5 py-0.5 rounded-md">Out</span>
+                      )}
+                    </div>
+
+                    {/* Text content */}
+                    <div className="p-3">
                     <p className="text-white text-sm font-semibold leading-tight line-clamp-2 mb-1">{product.name}</p>
                     <p className="text-purple-400 font-bold text-sm">{fmt(product.price)}</p>
-                    <p className={`text-xs mt-1 ${outOfStock ? 'text-red-400' : lowStock ? 'text-amber-400' : 'text-gray-600'}`}>
+                    <p className={`text-xs mt-0.5 ${outOfStock ? 'text-red-400' : lowStock ? 'text-amber-400' : 'text-gray-600'}`}>
                       {outOfStock ? 'Out of stock' : lowStock ? `Low: ${product.stock} left` : `${product.stock} ${product.unit}`}
                     </p>
+                    </div>
                   </button>
                 )
               })}
@@ -586,6 +916,15 @@ export default function CashierPOSPage() {
       )}
 
       {receipt && <ReceiptModal receipt={receipt} onNewOrder={() => setReceipt(null)} />}
+
+      {showEndShift && (
+        <EndShiftModal
+          shift={shift}
+          liveCash={liveCash}
+          onClose={() => setShowEndShift(false)}
+          onEnd={handleShiftEnd}
+        />
+      )}
     </div>
   )
 }

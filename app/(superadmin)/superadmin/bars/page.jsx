@@ -222,8 +222,8 @@ export default function BarsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
         <div>
-          <h2 className="text-white font-bold text-xl">Bars</h2>
-          <p className="text-gray-400 text-sm mt-0.5">Manage all registered bars</p>
+          <h2 className="text-white font-bold text-xl">POS</h2>
+          <p className="text-gray-400 text-sm mt-0.5">Manage all registered POS</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={fetchBars} className="p-2.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl text-gray-400 hover:text-white transition-colors">
@@ -234,7 +234,7 @@ export default function BarsPage() {
             className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
           >
             <MdAdd className="text-xl" />
-            Add New Bar
+            Add New POS
           </button>
         </div>
       </div>
@@ -244,7 +244,7 @@ export default function BarsPage() {
         <MdSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-xl" />
         <input
           type="text"
-          placeholder="Search bars by name or email..."
+          placeholder="Search POS by name or email..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="w-full bg-gray-900 border border-gray-800 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm"
@@ -260,14 +260,14 @@ export default function BarsPage() {
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-center">
             <MdStorefront className="text-4xl text-gray-700 mb-2" />
-            <p className="text-gray-500 text-sm">No bars found</p>
+            <p className="text-gray-500 text-sm">No POS found</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-800">
-                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3.5">Bar</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3.5">POS</th>
                   <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3.5 hidden sm:table-cell">Plan</th>
                   <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3.5">Status</th>
                   <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3.5 hidden md:table-cell">Expiry</th>
@@ -388,7 +388,7 @@ export default function BarsPage() {
                     className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm"
                   />
                 </div>
-                <div>
+                {/* <div>
                   <label className="block text-sm text-gray-300 mb-1.5">Tax Rate (%)</label>
                   <input
                     type="number"
@@ -399,7 +399,7 @@ export default function BarsPage() {
                     placeholder="0"
                     className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm"
                   />
-                </div>
+                </div> */}
                 <div className="col-span-2">
                   <label className="block text-sm text-gray-300 mb-1.5">Subscription Plan</label>
                   <select
