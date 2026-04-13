@@ -2,6 +2,14 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   turbopack: {},
+  images: {
+    remotePatterns: [
+      // GHL / LeadConnector media storage
+      { protocol: 'https', hostname: '**.leadconnectorhq.com' },
+      { protocol: 'https', hostname: '**.msgsndr.com' },
+      { protocol: 'https', hostname: 'storage.googleapis.com' },
+    ],
+  },
   async headers() {
     return [
       {

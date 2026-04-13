@@ -575,12 +575,12 @@ export default function POSPage() {
                     }`}>
 
                     {/* Image area */}
-                    <div className="relative w-full h-28 bg-gray-800">
+                    <div className="relative w-full h-32 bg-gray-800 flex items-center justify-center">
                       {product.image ? (
                         <img
                           src={product.image}
                           alt={product.name}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-contain p-1"
                           onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex' }}
                         />
                       ) : null}

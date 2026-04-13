@@ -681,16 +681,16 @@ export default function CashierPOSPage() {
                     }`}>
 
                     {/* Image area */}
-                    <div className="relative w-full h-28 bg-gray-800">
+                    <div className="relative w-full h-32 bg-gray-800 flex items-center justify-center">
                       {product.image ? (
                         <img
                           src={product.image}
                           alt={product.name}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-contain p-1"
                           onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex' }}
                         />
                       ) : null}
-                      {/* Placeholder */}
+                      {/* Placeholder — shown when no image or image fails to load */}
                       <div
                         className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900"
                         style={{ display: product.image ? 'none' : 'flex' }}
