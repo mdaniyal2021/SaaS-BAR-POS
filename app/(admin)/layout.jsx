@@ -25,6 +25,7 @@ const navItems = [
   { label: 'Products',   href: '/products',    icon: MdStorefront  },
   { label: 'Categories', href: '/categories',  icon: MdCategory    },
   { label: 'Inventory',  href: '/inventory',   icon: MdInventory   },
+  // { label: 'Staff', href: '/staff', icon: MdPeople }, // Disabled — staff managed by superadmin only
   { label: 'Reports',    href: '/reports',     icon: MdBarChart    },
   { label: 'Shifts',     href: '/shifts',      icon: MdSchedule    },
   { label: 'Settings',   href: '/settings',    icon: MdSettings    },

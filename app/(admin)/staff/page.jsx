@@ -1,5 +1,28 @@
 'use client'
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Staff page is disabled — staff (cashier) accounts are managed by superadmin only.
+// Direct URL access (/staff) redirects to dashboard.
+//
+// To re-enable in future:
+//   1. Uncomment the full page code below
+//   2. Remove the redirect component above it
+//   3. Un-comment the Staff nav item in app/(admin)/layout.jsx
+// ─────────────────────────────────────────────────────────────────────────────
+
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+
+export default function StaffPage() {
+  const router = useRouter()
+  useEffect(() => { router.replace('/dashboard') }, [router])
+  return null
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FULL STAFF PAGE CODE — PRESERVED FOR FUTURE USE
+   ═══════════════════════════════════════════════════════════════════════════
+
 import { useEffect, useState, useCallback } from 'react'
 import {
   MdAdd, MdEdit, MdDelete, MdClose, MdSearch,
@@ -140,7 +163,6 @@ export default function StaffPage() {
     const url    = isEdit ? `/api/admin/staff/${selected._id}` : '/api/admin/staff'
     const method = isEdit ? 'PATCH' : 'POST'
 
-    // For edit — only send password if it was changed
     const body = isEdit
       ? {
           name:     form.name.trim(),
@@ -224,7 +246,6 @@ export default function StaffPage() {
   return (
     <div className="space-y-6">
 
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Staff</h1>
@@ -244,7 +265,6 @@ export default function StaffPage() {
         )}
       </div>
 
-      {/* Stat cards */}
       <div className="grid grid-cols-3 gap-4">
         {[
           { label: 'Total Staff',    value: staff.length,  color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20' },
@@ -258,7 +278,6 @@ export default function StaffPage() {
         ))}
       </div>
 
-      {/* Search */}
       <div className="relative max-w-sm">
         <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg" />
         <input
@@ -270,7 +289,6 @@ export default function StaffPage() {
         />
       </div>
 
-      {/* Table */}
       <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-48">
@@ -294,18 +312,12 @@ export default function StaffPage() {
                     <td colSpan={6} className="text-center py-14">
                       <MdPeople className="text-4xl text-gray-700 mx-auto mb-2" />
                       <p className="text-gray-500 text-sm">
-                        {search
-                          ? 'No staff match your search'
-                          : 'No cashiers yet — add your first one'}
+                        {search ? 'No staff match your search' : 'No cashiers yet'}
                       </p>
                     </td>
                   </tr>
                 ) : filtered.map(member => (
-                  <tr
-                    key={member._id}
-                    className={`hover:bg-gray-800/40 transition-colors ${!member.isActive ? 'opacity-50' : ''}`}
-                  >
-                    {/* Name */}
+                  <tr key={member._id} className={`hover:bg-gray-800/40 transition-colors ${!member.isActive ? 'opacity-50' : ''}`}>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-purple-600/20 border border-purple-500/30 rounded-lg flex items-center justify-center shrink-0">
@@ -314,23 +326,15 @@ export default function StaffPage() {
                         <span className="text-white font-medium text-sm">{member.name}</span>
                       </div>
                     </td>
-
-                    {/* Email */}
                     <td className="px-5 py-4 text-sm text-gray-400">{member.email}</td>
-
-                    {/* Last Login */}
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-1.5 text-sm text-gray-500">
                         <MdAccessTime className="text-base shrink-0" />
                         {member.lastLogin
-                          ? new Date(member.lastLogin).toLocaleDateString('en-GB', {
-                              day: '2-digit', month: 'short', year: 'numeric',
-                            })
+                          ? new Date(member.lastLogin).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
                           : 'Never'}
                       </div>
                     </td>
-
-                    {/* Status badge */}
                     <td className="px-5 py-4">
                       <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${
                         member.isActive
@@ -340,8 +344,6 @@ export default function StaffPage() {
                         {member.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-
-                    {/* Toggle */}
                     <td className="px-5 py-4">
                       <button onClick={() => handleToggle(member)} className="text-2xl">
                         {member.isActive
@@ -350,8 +352,6 @@ export default function StaffPage() {
                         }
                       </button>
                     </td>
-
-                    {/* Actions */}
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
                         <button
@@ -376,106 +376,51 @@ export default function StaffPage() {
         )}
       </div>
 
-      {/* ── Add / Edit Modal ─────────────────────────────────────────────────── */}
       {(modalMode === 'add' || modalMode === 'edit') && (
-        <Modal
-          title={modalMode === 'add' ? 'Add Cashier' : 'Edit Cashier'}
-          onClose={closeModal}
-        >
+        <Modal title={modalMode === 'add' ? 'Add Cashier' : 'Edit Cashier'} onClose={closeModal}>
           <div className="space-y-4">
-
-            {/* Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">
-                Full Name <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={form.name}
-                onChange={handleField}
-                placeholder="e.g. Ali Hassan"
-                autoFocus
-                className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm"
-              />
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">Full Name <span className="text-red-400">*</span></label>
+              <input type="text" name="name" value={form.name} onChange={handleField} placeholder="e.g. Ali Hassan" autoFocus
+                className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm" />
             </div>
-
-            {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">
-                Email Address <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={handleField}
-                placeholder="cashier@example.com"
-                className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm"
-              />
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">Email Address <span className="text-red-400">*</span></label>
+              <input type="email" name="email" value={form.email} onChange={handleField} placeholder="cashier@example.com"
+                className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-sm" />
             </div>
-
-            {/* Password */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1.5">
                 Password
-                {modalMode === 'edit' && (
-                  <span className="text-gray-500 text-xs ml-2">(leave blank to keep current)</span>
-                )}
-                {modalMode === 'add' && <span className="text-red-400"> *</span>}
+                {modalMode === 'edit' && <span className="text-gray-500 text-xs ml-2">(leave blank to keep current)</span>}
+                {modalMode === 'add'  && <span className="text-red-400"> *</span>}
               </label>
-              <PasswordInput
-                value={form.password}
-                onChange={handleField}
-                placeholder={modalMode === 'edit' ? 'Leave blank to keep current' : 'Min 6 characters'}
-              />
+              <PasswordInput value={form.password} onChange={handleField}
+                placeholder={modalMode === 'edit' ? 'Leave blank to keep current' : 'Min 6 characters'} />
             </div>
-
-            {/* Buttons */}
             <div className="flex gap-3 pt-1">
-              <button
-                onClick={closeModal}
-                className="flex-1 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium py-2.5 rounded-xl transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving || !form.name.trim() || !form.email.trim()}
-                className="flex-1 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 disabled:cursor-not-allowed text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
-              >
-                {saving
-                  ? 'Saving...'
-                  : modalMode === 'add' ? 'Create Cashier' : 'Save Changes'}
+              <button onClick={closeModal}
+                className="flex-1 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium py-2.5 rounded-xl transition-colors">Cancel</button>
+              <button onClick={handleSave} disabled={saving || !form.name.trim() || !form.email.trim()}
+                className="flex-1 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 disabled:cursor-not-allowed text-white text-sm font-semibold py-2.5 rounded-xl transition-colors">
+                {saving ? 'Saving...' : modalMode === 'add' ? 'Create Cashier' : 'Save Changes'}
               </button>
             </div>
-
           </div>
         </Modal>
       )}
 
-      {/* ── Delete Confirm Modal ─────────────────────────────────────────────── */}
       {modalMode === 'delete' && (
         <Modal title="Delete Cashier" onClose={closeModal}>
           <p className="text-gray-400 text-sm mb-2">
-            Are you sure you want to delete{' '}
-            <span className="text-white font-medium">"{selected?.name}"</span>?
+            Are you sure you want to delete <span className="text-white font-medium">"{selected?.name}"</span>?
           </p>
-          <p className="text-gray-500 text-xs mb-5">
-            This will permanently remove their account. Their past orders will remain in the system.
-          </p>
+          <p className="text-gray-500 text-xs mb-5">This will permanently remove their account. Past orders remain in the system.</p>
           <div className="flex gap-3">
-            <button
-              onClick={closeModal}
-              className="flex-1 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium py-2.5 rounded-xl transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={saving}
-              className="flex-1 bg-red-600 hover:bg-red-500 disabled:bg-red-800 disabled:cursor-not-allowed text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
-            >
+            <button onClick={closeModal}
+              className="flex-1 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium py-2.5 rounded-xl transition-colors">Cancel</button>
+            <button onClick={handleDelete} disabled={saving}
+              className="flex-1 bg-red-600 hover:bg-red-500 disabled:bg-red-800 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors">
               {saving ? 'Deleting...' : 'Delete'}
             </button>
           </div>
@@ -486,3 +431,5 @@ export default function StaffPage() {
     </div>
   )
 }
+
+   ═══════════════════════════════════════════════════════════════════════════ */
