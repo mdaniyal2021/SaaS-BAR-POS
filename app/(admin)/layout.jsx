@@ -63,7 +63,7 @@ export default function AdminLayout({ children }) {
         {/* Logo */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-800">
           <div className="flex items-center gap-3">
-            <img src="/icons/logo.png" alt="BrewPOS" className="h-25 w-auto object-contain" />
+            <img src="/icons/logo.png" alt="MyEasyTill" className="h-25 w-auto object-contain" />
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -121,8 +121,8 @@ export default function AdminLayout({ children }) {
             <MdMenu className="text-2xl" />
           </button>
           <div className="flex items-center gap-2">
-            <img src="/icons/logo.png" alt="BrewPOS" className="h-7 w-auto object-contain" />
-            <span className="text-white font-semibold text-sm">BrewPOS</span>
+            <img src="/icons/logo.png" alt="MyEasyTill" className="h-7 w-auto object-contain" />
+            <span className="text-white font-semibold text-sm">MyEasyTill</span>
           </div>
         </header>
 

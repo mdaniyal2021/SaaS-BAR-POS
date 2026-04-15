@@ -12,7 +12,7 @@ import {
 const fmt = (n) => `$${Number(n ?? 0).toFixed(2)}`
 
 // ─── IndexedDB helpers for offline orders ─────────────────────────────────────
-const DB_NAME    = 'brewpos-offline'
+const DB_NAME    = 'myeasytill-offline'
 const DB_VERSION = 1
 const STORE_NAME = 'pending-orders'
 
@@ -439,7 +439,7 @@ export default function POSPage() {
         }))
         setReceipt({
           orderNumber:    offlineOrderNumber,
-          barName:        'BrewPOS',
+          barName:        'MyEasyTill',
           barAddress:     '',
           barPhone:       '',
           items:          orderItems,
@@ -501,7 +501,7 @@ export default function POSPage() {
         {/* Top bar */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <img src="/icons/logo.png" alt="BrewPOS" className="h-25 w-auto object-contain shrink-0" />
+            <img src="/icons/logo.png" alt="MyEasyTill" className="h-25 w-auto object-contain shrink-0" />
             {/* <span className="text-white font-bold text-lg">POS</span> */}
           </div>
 

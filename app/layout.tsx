@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'BrewPOS — Bar Management System',
+  title: 'MyEasyTill — Bar Management System',
   description: 'SaaS Bar Management POS System',
 }
 
@@ -33,7 +33,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="BrewPOS" />
+        <meta name="apple-mobile-web-app-title" content="MyEasyTill" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <script
           dangerouslySetInnerHTML={{

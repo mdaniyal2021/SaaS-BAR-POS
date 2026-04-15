@@ -54,7 +54,7 @@ function ZReportModal({ shiftId, onClose }) {
             <span className="text-white font-semibold">Z-Report</span>
             {shift && (
               <span className="text-xs text-gray-500 font-normal ml-1">
-                — {shift.cashier?.name}
+                — {shift.cashier?.name || shift.cashierName || '—'}
               </span>
             )}
           </div>
@@ -76,7 +76,7 @@ function ZReportModal({ shiftId, onClose }) {
               {/* Shift info */}
               <div className="bg-gray-800 rounded-xl p-4 space-y-2 text-sm">
                 <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Shift Details</p>
-                <Row label="Cashier"  value={shift.cashier?.name || '—'} />
+                <Row label="Cashier"  value={shift.cashier?.name || shift.cashierName || '—'} />
                 <Row label="Email"    value={shift.cashier?.email || '—'} sub />
                 <Row label="Started"  value={fmtDT(shift.startTime)} />
                 <Row label="Ended"    value={fmtDT(shift.endTime)} />
@@ -282,8 +282,8 @@ export default function ShiftsPage() {
                   return (
                     <tr key={shift._id} className="hover:bg-gray-800/40 transition-colors">
                       <td className="px-4 py-3 font-medium text-white whitespace-nowrap">
-                        {shift.cashier?.name || '—'}
-                        <p className="text-gray-500 text-xs font-normal">{shift.cashier?.email}</p>
+                        {shift.cashier?.name || shift.cashierName || '—'}
+                        <p className="text-gray-500 text-xs font-normal">{shift.cashier?.email || ''}</p>
                       </td>
                       <td className="px-4 py-3 text-gray-300 whitespace-nowrap">{fmtDT(shift.startTime)}</td>
                       <td className="px-4 py-3 text-gray-300 whitespace-nowrap">{fmtDT(shift.endTime)}</td>
@@ -323,14 +323,12 @@ export default function ShiftsPage() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        {shift.status === 'closed' && (
-                          <button
-                            onClick={() => setViewShiftId(shift._id)}
-                            className="text-xs font-medium text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
-                          >
-                            Z-Report
-                          </button>
-                        )}
+                        <button
+                          onClick={() => setViewShiftId(shift._id)}
+                          className="text-xs font-medium text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                        >
+                          {shift.status === 'closed' ? 'Z-Report' : 'View'}
+                        </button>
                       </td>
                     </tr>
                   )

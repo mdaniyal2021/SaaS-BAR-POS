@@ -156,7 +156,7 @@ export async function POST(request) {
       httpOnly: true,                                         // JS cannot read this cookie
       secure:   process.env.NODE_ENV === 'production',       // HTTPS only in prod
       sameSite: 'strict',                                    // No cross-site requests
-      maxAge:   24 * 60 * 60,
+      maxAge:   30 * 24 * 60 * 60,
       path:     '/',
     })
 

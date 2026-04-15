@@ -2,6 +2,14 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { FiWifiOff } from 'react-icons/fi'
+import {
+  cacheProducts, getCachedProducts,
+  cacheCategories, getCachedCategories,
+  cacheShift, getCachedShift, createOfflineShift,
+  getOfflineSession, clearOfflineSession,
+  queueOfflineOrder, getPendingOfflineOrders, markOrderSynced,
+} from '@/lib/offline-db'
 import {
   MdAdd, MdRemove, MdDelete, MdClose, MdCheck,
   MdLocalAtm, MdCreditCard, MdPrint, MdShoppingCart,
@@ -15,7 +23,7 @@ const fmtTime = (iso) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-di
 const fmtDate = (iso) => new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 
 // ─── Start Shift Screen ───────────────────────────────────────────────────────
-function StartShiftScreen({ cashierName, onStart, onLogout }) {
+function StartShiftScreen({ cashierName, onStart, onOfflineStart, isOffline, onLogout }) {
   const [cash,    setCash]    = useState('0')
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
@@ -30,17 +38,30 @@ function StartShiftScreen({ cashierName, onStart, onLogout }) {
   const handleStart = async () => {
     const amount = parseFloat(cash) || 0
     setLoading(true); setError('')
-    const res  = await fetch('/api/shifts/start', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ openingCash: amount }),
-    })
-    const data = await res.json()
-    if (data.success) {
-      onStart(data.shift)
-    } else {
-      setError(data.message)
-      setLoading(false)
+
+    // ── Offline: create local shift immediately ───────────────────────────────
+    if (isOffline) {
+      await onOfflineStart(amount)
+      return
+    }
+
+    // ── Online: server call ───────────────────────────────────────────────────
+    try {
+      const res  = await fetch('/api/shifts/start', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ openingCash: amount }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        onStart(data.shift)
+      } else {
+        setError(data.message)
+        setLoading(false)
+      }
+    } catch {
+      // Network failed mid-attempt — fall back to offline
+      await onOfflineStart(amount)
     }
   }
 
@@ -52,7 +73,12 @@ function StartShiftScreen({ cashierName, onStart, onLogout }) {
 
         {/* Logo + greeting */}
         <div className="text-center space-y-1">
-          <img src="/icons/logo.png" alt="BrewPOS" className="h-16 w-auto mx-auto object-contain" />
+          <img src="/icons/logo.png" alt="MyEasyTill" className="h-16 w-auto mx-auto object-contain" />
+          {isOffline && (
+            <div className="inline-flex items-center gap-1.5 bg-orange-500/10 border border-orange-500/30 text-orange-400 text-xs px-3 py-1 rounded-full">
+              <FiWifiOff className="text-xs" /> Offline Mode
+            </div>
+          )}
           <p className="text-white font-semibold text-lg">Welcome, {cashierName}</p>
           <p className="text-gray-500 text-sm">
             {now.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' })}
@@ -128,17 +154,32 @@ function EndShiftModal({ shift, liveCash, onClose, onEnd }) {
 
   const handleEnd = async () => {
     setLoading(true); setError('')
-    const res  = await fetch('/api/shifts/end', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ closingCash: closingAmt, notes }),
-    })
-    const data = await res.json()
-    if (data.success) {
-      onEnd(data.shift)
-    } else {
-      setError(data.message)
-      setLoading(false)
+
+    // Offline: clear local shift immediately, sync later
+    if (!navigator.onLine) {
+      onEnd(null)
+      return
+    }
+
+    try {
+      const res  = await fetch('/api/shifts/end', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ closingCash: closingAmt, notes }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        onEnd(data.shift)
+      } else if (data.offline) {
+        // SW returned offline fallback
+        onEnd(null)
+      } else {
+        setError(data.message)
+        setLoading(false)
+      }
+    } catch {
+      // Network dropped
+      onEnd(null)
     }
   }
 
@@ -445,6 +486,41 @@ function ReceiptModal({ receipt, onNewOrder }) {
 export default function CashierPOSPage() {
   const router = useRouter()
 
+  // ── Network status ────────────────────────────────────────────────────────
+  const [isOnline, setIsOnline] = useState(true)
+
+  useEffect(() => {
+    const update = () => setIsOnline(navigator.onLine)
+    update()
+    window.addEventListener('online',  update)
+    window.addEventListener('offline', update)
+    return () => {
+      window.removeEventListener('online',  update)
+      window.removeEventListener('offline', update)
+    }
+  }, [])
+
+  // Sync pending offline orders when we come back online
+  useEffect(() => {
+    if (!isOnline) return
+    const syncOrders = async () => {
+      try {
+        const pending = await getPendingOfflineOrders()
+        for (const order of pending) {
+          try {
+            const res = await fetch('/api/orders', {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body:    JSON.stringify(order.orderPayload),
+            })
+            if (res.ok) await markOrderSynced(order.localId)
+          } catch { /* leave for next sync */ }
+        }
+      } catch { /* IndexedDB unavailable */ }
+    }
+    syncOrders()
+  }, [isOnline])
+
   // Shift state
   const [shift,        setShift]        = useState(null)
   const [shiftLoaded,  setShiftLoaded]  = useState(false)
@@ -470,44 +546,90 @@ export default function CashierPOSPage() {
   const [receipt,        setReceipt]        = useState(null)
   const [error,          setError]          = useState('')
 
-  // Tax is calculated per-product using each product's own taxRate
-
-  // Check for active shift on mount
+  // ── Check for active shift on mount (online + offline) ───────────────────
   useEffect(() => {
-    fetch('/api/shifts/active')
-      .then(r => r.json())
-      .then(data => {
-        if (data.shift) setShift(data.shift)
+    const init = async () => {
+      try {
+        const res  = await fetch('/api/shifts/active')
+        const data = await res.json()
+        if (data.shift) {
+          setShift(data.shift)
+          await cacheShift(data.shift)
+        }
         if (data.cashierName) setCashierName(data.cashierName)
         if (data.currentCashBalance != null) setLiveCash(data.currentCashBalance)
+      } catch {
+        // Network failed — try IndexedDB
+        const [cachedShift, session] = await Promise.all([getCachedShift(), getOfflineSession()])
+        if (cachedShift) setShift(cachedShift)
+        if (session?.name) setCashierName(session.name)
+        if (cachedShift?.openingCash != null) setLiveCash(cachedShift.openingCash)
+      } finally {
         setShiftLoaded(true)
-      })
-      .catch(() => setShiftLoaded(true))
+      }
+    }
+    init()
   }, [])
 
+  // ── Load products + categories (with IndexedDB cache) ────────────────────
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const [pRes, cRes] = await Promise.all([fetch('/api/admin/products'), fetch('/api/admin/categories')])
+      const [pRes, cRes] = await Promise.all([
+        fetch('/api/admin/products'),
+        fetch('/api/admin/categories'),
+      ])
       const [pData, cData] = await Promise.all([pRes.json(), cRes.json()])
-      if (pData.success) setProducts(pData.products)
-      if (cData.success) setCategories(cData.categories)
-    } finally { setLoading(false) }
+      if (pData.success) {
+        setProducts(pData.products)
+        if (!pData.offline) cacheProducts(pData.products)
+      }
+      if (cData.success) {
+        setCategories(cData.categories)
+        if (!cData.offline) cacheCategories(cData.categories)
+      }
+    } catch {
+      // Network failed — load from IndexedDB
+      const [cachedP, cachedC] = await Promise.all([getCachedProducts(), getCachedCategories()])
+      if (cachedP.length > 0) setProducts(cachedP)
+      if (cachedC.length > 0) setCategories(cachedC)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => { loadData() }, [loadData])
 
+  // ── Logout ────────────────────────────────────────────────────────────────
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
+    await Promise.all([
+      fetch('/api/auth/logout', { method: 'POST' }).catch(() => {}),
+      clearOfflineSession(),
+    ])
     router.push('/login')
   }
 
   const handleShiftEnd = (closedShift) => {
     setShift(null)
     setShowEndShift(false)
+    cacheShift(null)
   }
 
-  // Show spinner while checking shift
+  // ── Offline shift start ───────────────────────────────────────────────────
+  const handleOfflineShiftStart = async (openingCash) => {
+    const session  = await getOfflineSession()
+    const newShift = await createOfflineShift({
+      openingCash,
+      cashierId:   session?.id      || '',
+      barId:       session?.barId   || '',
+      cashierName: session?.name    || cashierName,
+    })
+    const { id: _, ...shift } = newShift          // strip IndexedDB keyPath
+    setShift(shift)
+    setLiveCash(shift.openingCash ?? 0)
+  }
+
+  // ── Show spinner while loading shift status ───────────────────────────────
   if (!shiftLoaded) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
@@ -516,16 +638,34 @@ export default function CashierPOSPage() {
     )
   }
 
-  // No active shift → show start shift screen
+  // ── No active shift → start shift screen ─────────────────────────────────
   if (!shift) {
     const handleShiftStart = (newShift) => {
       setShift(newShift)
       setLiveCash(newShift.openingCash ?? 0)
+      cacheShift(newShift)
     }
-    return <StartShiftScreen cashierName={cashierName} onStart={handleShiftStart} onLogout={handleLogout} />
+    return (
+      <StartShiftScreen
+        cashierName={cashierName}
+        onStart={handleShiftStart}
+        onOfflineStart={handleOfflineShiftStart}
+        isOffline={!isOnline}
+        onLogout={handleLogout}
+      />
+    )
   }
 
   const addToCart = (product) => {
+    // Offline: skip stock check (we can't verify server stock)
+    if (!isOnline) {
+      setCart(prev => {
+        const existing = prev.find(i => i.product._id === product._id)
+        if (existing) return prev.map(i => i.product._id === product._id ? { ...i, quantity: i.quantity + 1 } : i)
+        return [...prev, { product, quantity: 1 }]
+      })
+      return
+    }
     if (product.stock <= 0) return
     setCart(prev => {
       const existing = prev.find(i => i.product._id === product._id)
@@ -563,33 +703,95 @@ export default function CashierPOSPage() {
   const openNumPad = (target) => { setNumPadTarget(target); setShowNumPad(true) }
   const handleNumPadChange = (val) => numPadTarget === 'cash' ? setCashInput(val) : setDiscountValue(val)
 
+  // ── Place order (online + offline) ───────────────────────────────────────
   const placeOrder = async () => {
     if (cart.length === 0) return
     setPlacing(true); setError('')
-    try {
-      const res = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: cart.map(i => ({ productId: i.product._id, quantity: i.quantity })),
-          paymentMethod: payMethod,
-          cashReceived: payMethod === 'cash' ? cashPaid : 0,
-          notes,
-          discountType,
-          discountValue: discountAmount,
-          discountRawVal: discountRaw,
-        }),
-      })
-      const data = await res.json()
-      if (data.success) {
-        if (payMethod === 'cash') {
-          setLiveCash(prev => parseFloat((prev + (data.receipt?.total ?? 0)).toFixed(2)))
+
+    const orderPayload = {
+      items:          cart.map(i => ({ productId: i.product._id, quantity: i.quantity })),
+      paymentMethod:  payMethod,
+      cashReceived:   payMethod === 'cash' ? cashPaid : 0,
+      notes,
+      discountType,
+      discountValue:  discountAmount,
+      discountRawVal: discountRaw,
+    }
+
+    // ── Try online ────────────────────────────────────────────────────────
+    if (isOnline) {
+      try {
+        const res  = await fetch('/api/orders', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(orderPayload),
+        })
+        const data = await res.json()
+        if (data.success) {
+          if (payMethod === 'cash') setLiveCash(prev => parseFloat((prev + (data.receipt?.total ?? 0)).toFixed(2)))
+          setReceipt({ ...data.receipt, cashReceived: payMethod === 'cash' ? cashPaid : 0 })
+          setPayModal(false); clearCart(); setCashInput('0'); loadData()
+          setPlacing(false)
+          return
         }
-        setReceipt({ ...data.receipt, cashReceived: payMethod === 'cash' ? cashPaid : 0 })
-        setPayModal(false); clearCart(); setCashInput('0'); loadData()
-      } else { setError(data.message) }
-    } catch { setError('Network error. Please try again.') }
-    finally { setPlacing(false) }
+        // If server returned a real error (not an offline fallback), show it
+        if (!data.offline) {
+          setError(data.message)
+          setPlacing(false)
+          return
+        }
+        // data.offline === true → SW returned offline fallback, fall through
+      } catch {
+        // Network dropped mid-request — fall through to offline handling
+      }
+    }
+
+    // ── Offline: build local receipt + queue ──────────────────────────────
+    try {
+      const session    = await getOfflineSession()
+      const localReceipt = {
+        orderNumber:    `OFF-${Date.now()}`,
+        isOffline:      true,
+        items:          cart.map(i => ({
+          name:     i.product.name,
+          quantity: i.quantity,
+          price:    i.product.price,
+          subtotal: parseFloat((i.product.price * i.quantity).toFixed(2)),
+        })),
+        subtotal:       parseFloat(subtotal.toFixed(2)),
+        discountAmount: parseFloat(discountAmount.toFixed(2)),
+        discountType,
+        discountValue:  discountRaw,
+        tax:            parseFloat(taxAmount.toFixed(2)),
+        total:          parseFloat(totalDisplay.toFixed(2)),
+        paymentMethod:  payMethod,
+        cashReceived:   payMethod === 'cash' ? cashPaid : 0,
+        notes,
+        cashier:        session?.name || cashierName,
+        barName:        session?.barName || '',
+        createdAt:      new Date().toISOString(),
+      }
+
+      await queueOfflineOrder(orderPayload, localReceipt)
+
+      if (payMethod === 'cash') {
+        setLiveCash(prev => parseFloat((prev + localReceipt.total).toFixed(2)))
+      }
+      setReceipt({ ...localReceipt, cashReceived: payMethod === 'cash' ? cashPaid : 0 })
+      setPayModal(false); clearCart(); setCashInput('0')
+      setPlacing(false)
+
+      // Register background sync if available
+      if ('serviceWorker' in navigator && 'SyncManager' in window) {
+        try {
+          const reg = await navigator.serviceWorker.ready
+          await reg.sync.register('sync-offline-orders')
+        } catch { /* sync not available */ }
+      }
+    } catch {
+      setError('Failed to save order offline. Please try again.')
+      setPlacing(false)
+    }
   }
 
   return (
@@ -601,8 +803,12 @@ export default function CashierPOSPage() {
         {/* Header */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <img src="/icons/logo.png" alt="BrewPOS" className="h-25 w-auto object-contain shrink-0" />
-            {/* <span className="text-white font-bold text-lg">BrewPOS</span> */}
+            <img src="/icons/logo.png" alt="MyEasyTill" className="h-25 w-auto object-contain shrink-0" />
+            {!isOnline && (
+              <div className="flex items-center gap-1 text-xs text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2.5 py-1 rounded-full shrink-0">
+                <FiWifiOff className="text-xs" /> Offline
+              </div>
+            )}
           </div>
           <div className="relative flex-1 max-w-sm">
             <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg" />
